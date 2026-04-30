@@ -63,6 +63,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Auto-escape HTML
+    |--------------------------------------------------------------------------
+    |
+    | When true, every `{$var}` output is run through htmlspecialchars(),
+    | matching Blade's `{{ }}` behavior. Templates that need raw output can
+    | use the `nofilter` flag (`{$var nofilter}`) for individual writes.
+    | Set to false to opt out and require explicit `|escape` everywhere.
+    |
+    */
+
+    'escape_html' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Plugins Directories
     |--------------------------------------------------------------------------
     |
