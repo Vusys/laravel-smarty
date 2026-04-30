@@ -215,7 +215,7 @@ Ordered roughly by impact.
 
 - [x] **`@auth` / `@guest`** — block tags `{auth}…{/auth}` and
       `{guest}…{/guest}`. Optional `guard="api"` parameter.
-- [ ] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus
+- [x] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus
       `{cannot}` for the inverse.
 - [ ] **`@error('field')`** — short-circuit access to the first validation
       error: `{error field="email"}<p class="err">{$message}</p>{/error}`.
