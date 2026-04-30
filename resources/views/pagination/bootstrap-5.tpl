@@ -1,0 +1,79 @@
+{if $paginator->hasPages()}
+    <nav class="d-flex justify-items-center justify-content-between">
+        <div class="d-flex justify-content-between flex-fill d-sm-none">
+            <ul class="pagination">
+                {if $paginator->onFirstPage()}
+                    <li class="page-item disabled" aria-disabled="true">
+                        <span class="page-link">{lang key="pagination.previous"}</span>
+                    </li>
+                {else}
+                    <li class="page-item">
+                        <a class="page-link" href="{$paginator->previousPageUrl()}" rel="prev">{lang key="pagination.previous"}</a>
+                    </li>
+                {/if}
+
+                {if $paginator->hasMorePages()}
+                    <li class="page-item">
+                        <a class="page-link" href="{$paginator->nextPageUrl()}" rel="next">{lang key="pagination.next"}</a>
+                    </li>
+                {else}
+                    <li class="page-item disabled" aria-disabled="true">
+                        <span class="page-link">{lang key="pagination.next"}</span>
+                    </li>
+                {/if}
+            </ul>
+        </div>
+
+        <div class="d-none flex-sm-fill d-sm-flex align-items-sm-center justify-content-sm-between">
+            <div class="small text-muted">
+                {lang key="Showing"}
+                <span class="fw-semibold">{$paginator->firstItem()}</span>
+                {lang key="to"}
+                <span class="fw-semibold">{$paginator->lastItem()}</span>
+                {lang key="of"}
+                <span class="fw-semibold">{$paginator->total()}</span>
+                {lang key="results"}
+            </div>
+
+            <div>
+                <ul class="pagination">
+                    {if $paginator->onFirstPage()}
+                        <li class="page-item disabled" aria-disabled="true" aria-label="{lang key="pagination.previous"}">
+                            <span class="page-link" aria-hidden="true">&lsaquo;</span>
+                        </li>
+                    {else}
+                        <li class="page-item">
+                            <a class="page-link" href="{$paginator->previousPageUrl()}" rel="prev" aria-label="{lang key="pagination.previous"}">&lsaquo;</a>
+                        </li>
+                    {/if}
+
+                    {foreach $elements as $element}
+                        {if is_string($element)}
+                            <li class="page-item disabled" aria-disabled="true"><span class="page-link">{$element}</span></li>
+                        {/if}
+
+                        {if is_array($element)}
+                            {foreach $element as $page => $url}
+                                {if $page == $paginator->currentPage()}
+                                    <li class="page-item active" aria-current="page"><span class="page-link">{$page}</span></li>
+                                {else}
+                                    <li class="page-item"><a class="page-link" href="{$url}">{$page}</a></li>
+                                {/if}
+                            {/foreach}
+                        {/if}
+                    {/foreach}
+
+                    {if $paginator->hasMorePages()}
+                        <li class="page-item">
+                            <a class="page-link" href="{$paginator->nextPageUrl()}" rel="next" aria-label="{lang key="pagination.next"}">&rsaquo;</a>
+                        </li>
+                    {else}
+                        <li class="page-item disabled" aria-disabled="true" aria-label="{lang key="pagination.next"}">
+                            <span class="page-link" aria-hidden="true">&rsaquo;</span>
+                        </li>
+                    {/if}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{/if}
