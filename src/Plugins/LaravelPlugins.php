@@ -90,6 +90,24 @@ class LaravelPlugins
             return Gate::denies($params['ability'] ?? '', $arguments) ? (string) $content : '';
         });
 
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'service', static function (array $params, \Smarty\Template $template): string {
+            $template->assign($params['assign'] ?? '', app($params['name'] ?? ''));
+
+            return '';
+        });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'dump', static function (array $params): string {
+            foreach ($params as $value) {
+                dump($value);
+            }
+
+            return '';
+        });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'dd', static function (array $params): string {
+            dd(...array_values($params));
+        });
+
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'error', static function ($params, $content, \Smarty\Template $template, &$repeat): string {
             static $stack = [];
 
