@@ -213,8 +213,10 @@ Ordered roughly by impact.
 
 ### Medium priority — auth, validation, layout
 
-- [ ] **`@auth` / `@guest` / `@can`** — block tags `{auth}…{/auth}`,
-      `{can ability="update" model=$post}…{/can}`, plus `{guest}…{/guest}`.
+- [x] **`@auth` / `@guest`** — block tags `{auth}…{/auth}` and
+      `{guest}…{/guest}`. Optional `guard="api"` parameter.
+- [ ] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus
+      `{cannot}` for the inverse.
 - [ ] **`@error('field')`** — short-circuit access to the first validation
       error: `{error field="email"}<p class="err">{$message}</p>{/error}`.
 - [ ] **`@push` / `@stack`** — cross-template accumulation of scripts/styles.
