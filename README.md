@@ -217,7 +217,7 @@ Ordered roughly by impact.
       `{guest}…{/guest}`. Optional `guard="api"` parameter.
 - [x] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus
       `{cannot}` for the inverse.
-- [ ] **`@error('field')`** — short-circuit access to the first validation
+- [x] **`@error('field')`** — short-circuit access to the first validation
       error: `{error field="email"}<p class="err">{$message}</p>{/error}`.
 - [ ] **`@push` / `@stack`** — cross-template accumulation of scripts/styles.
       Smarty's `{capture}` is per-template; stacks aggregate across the
