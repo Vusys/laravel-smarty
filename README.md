@@ -222,8 +222,10 @@ Ordered roughly by impact.
 - [ ] **`@push` / `@stack`** — cross-template accumulation of scripts/styles.
       Smarty's `{capture}` is per-template; stacks aggregate across the
       whole inheritance + include tree.
-- [ ] **Pagination templates** — ship `views/pagination/*.tpl` and register
+- [x] **Pagination templates** — ship `views/pagination/*.tpl` and register
       them so `$paginator->links()` works without falling back to Blade.
+      Tailwind, Bootstrap 3/4/5 (full + simple) and Semantic UI variants
+      are all included.
 - [ ] **View composer data flow-through** — propagate composer-injected data
       from sub-template `View` instances back into Smarty's variable scope.
 

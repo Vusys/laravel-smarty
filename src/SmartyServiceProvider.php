@@ -23,6 +23,8 @@ class SmartyServiceProvider extends ServiceProvider
             __DIR__.'/../config/smarty.php' => $this->app->configPath('smarty.php'),
         ], 'smarty-config');
 
+        $this->loadViewsFrom(__DIR__.'/../resources/views/pagination', 'pagination');
+
         $this->registerEngine();
     }
 
