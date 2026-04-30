@@ -198,7 +198,7 @@ Ordered roughly by impact.
 
 - [x] **`@csrf` equivalent** — Smarty function `{csrf_field}` emitting
       `<input type="hidden" name="_token" value="...">`.
-- [ ] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form
+- [x] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form
       method spoofing.
 - [ ] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`,
       `{url path="/foo"}`, `{asset path="img.png"}`.
