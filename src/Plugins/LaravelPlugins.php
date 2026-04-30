@@ -3,6 +3,7 @@
 namespace Vusys\LaravelSmarty\Plugins;
 
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Js;
 use Smarty\Smarty;
 
 class LaravelPlugins
@@ -43,6 +44,10 @@ class LaravelPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans', static function (string $key, array $replace = []): string {
             return (string) __($key, $replace);
+        });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'json', static function ($value): string {
+            return (string) Js::from($value);
         });
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'old', static function (array $params) {
