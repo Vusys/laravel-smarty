@@ -47,5 +47,21 @@ class LaravelPlugins
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'old', static function (array $params) {
             return old($params['field'] ?? null, $params['default'] ?? null);
         });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'auth', static function ($params, $content, $template, &$repeat): string {
+            if ($repeat) {
+                return '';
+            }
+
+            return auth()->guard($params['guard'] ?? null)->check() ? (string) $content : '';
+        });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'guest', static function ($params, $content, $template, &$repeat): string {
+            if ($repeat) {
+                return '';
+            }
+
+            return auth()->guard($params['guard'] ?? null)->guest() ? (string) $content : '';
+        });
     }
 }
