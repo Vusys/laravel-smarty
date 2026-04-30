@@ -84,5 +84,30 @@ class LaravelPlugins
 
             return Gate::denies($params['ability'] ?? '', $arguments) ? (string) $content : '';
         });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'error', static function ($params, $content, \Smarty\Template $template, &$repeat): string {
+            static $stack = [];
+
+            $field = $params['field'] ?? '';
+            $errors = session('errors');
+            $hasError = $errors && $errors->has($field);
+
+            if ($repeat) {
+                if ($hasError) {
+                    $stack[] = $template->getTemplateVars('message');
+                    $template->assign('message', $errors->first($field));
+                }
+
+                return '';
+            }
+
+            if ($hasError) {
+                $template->assign('message', array_pop($stack));
+
+                return (string) $content;
+            }
+
+            return '';
+        });
     }
 }
