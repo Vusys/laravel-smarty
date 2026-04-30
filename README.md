@@ -196,7 +196,7 @@ Ordered roughly by impact.
 
 ### High priority — basic forms and routing
 
-- [ ] **`@csrf` equivalent** — Smarty function `{csrf_field}` emitting
+- [x] **`@csrf` equivalent** — Smarty function `{csrf_field}` emitting
       `<input type="hidden" name="_token" value="...">`.
 - [ ] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form
       method spoofing.
