@@ -32,5 +32,16 @@ class LaravelPlugins
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'asset', static function (array $params): string {
             return asset($params['path'] ?? '');
         });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'lang', static function (array $params): string {
+            $key = $params['key'] ?? '';
+            unset($params['key']);
+
+            return (string) __($key, $params);
+        });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans', static function (string $key, array $replace = []): string {
+            return (string) __($key, $replace);
+        });
     }
 }
