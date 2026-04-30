@@ -231,8 +231,9 @@ Ordered roughly by impact.
 
 ### Low priority — quality of life
 
-- [ ] **`@json($data)`** — `|json` modifier delegating to `Js::from()` for safe
-      JS embedding.
+- [x] **`@json($data)`** — `|json` modifier delegating to `Js::from()` for safe
+      JS embedding. Use with `nofilter` to bypass auto-escape inside `<script>`:
+      `var data = {$posts|json nofilter};`.
 - [ ] **`@inject`** — `{service name="App\\Services\\Metrics" assign="metrics"}`.
 - [ ] **`@dump` / `@dd`** — wire to Laravel's `dump()` / `dd()` helpers.
 
