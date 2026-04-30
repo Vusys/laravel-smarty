@@ -127,6 +127,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing
 | `cache_lifetime`| `3600`                                         | Cache lifetime in seconds when `caching` is on. |
 | `force_compile` | `false`                                        | Recompile every render. Useful in development. |
 | `debugging`     | `false`                                        | Smarty's debug console. |
+| `escape_html`   | `true`                                         | Auto-escape `{$var}` outputs through `htmlspecialchars()`, matching Blade's `{{ }}`. Set to `false` to require explicit `\|escape`. |
 | `plugins_paths` | `[]`                                           | Extra directories scanned for Smarty plugins. |
 
 Both directories are created automatically via Laravel's
@@ -206,9 +207,9 @@ Ordered roughly by impact.
       modifier for the inline form.
 - [x] **`old()`** — `{old field="email" default=$user->email}` for repopulating
       forms after validation failure.
-- [ ] **Auto-escape by default** — enable `setEscapeHtml(true)` so `{$var}`
-      is `e()`'d like Blade's `{{ }}`. Configurable for opt-out. Currently
-      users must remember `|escape`, which is a real footgun.
+- [x] **Auto-escape by default** — enable `setEscapeHtml(true)` so `{$var}`
+      is `e()`'d like Blade's `{{ }}`. Configurable for opt-out via
+      `smarty.escape_html`.
 
 ### Medium priority — auth, validation, layout
 

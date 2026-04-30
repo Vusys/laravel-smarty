@@ -30,6 +30,7 @@ class SmartyFactory
         $smarty->setCacheLifetime($this->config['cache_lifetime']);
         $smarty->setForceCompile((bool) $this->config['force_compile']);
         $smarty->setDebugging((bool) $this->config['debugging']);
+        $smarty->setEscapeHtml((bool) ($this->config['escape_html'] ?? true));
 
         foreach ($this->config['plugins_paths'] as $path) {
             $smarty->addPluginsDir($path);
