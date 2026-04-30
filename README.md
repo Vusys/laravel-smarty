@@ -204,7 +204,7 @@ Ordered roughly by impact.
       `{url path="/foo"}`, `{asset path="img.png"}`.
 - [x] **Translations** — `{lang key="messages.welcome"}` plus a `|trans`
       modifier for the inline form.
-- [ ] **`old()`** — `{old field="email" default=$user->email}` for repopulating
+- [x] **`old()`** — `{old field="email" default=$user->email}` for repopulating
       forms after validation failure.
 - [ ] **Auto-escape by default** — enable `setEscapeHtml(true)` so `{$var}`
       is `e()`'d like Blade's `{{ }}`. Configurable for opt-out. Currently
