@@ -2,6 +2,7 @@
 
 namespace Vusys\LaravelSmarty;
 
+use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
 use Illuminate\Filesystem\Filesystem;
 use Smarty\Smarty;
 
@@ -33,6 +34,8 @@ class SmartyFactory
         foreach ($this->config['plugins_paths'] as $path) {
             $smarty->addPluginsDir($path);
         }
+
+        LaravelPlugins::register($smarty);
 
         return $smarty;
     }
