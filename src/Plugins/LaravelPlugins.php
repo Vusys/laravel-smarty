@@ -43,5 +43,9 @@ class LaravelPlugins
         $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans', static function (string $key, array $replace = []): string {
             return (string) __($key, $replace);
         });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'old', static function (array $params) {
+            return old($params['field'] ?? null, $params['default'] ?? null);
+        });
     }
 }
