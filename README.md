@@ -202,7 +202,7 @@ Ordered roughly by impact.
       method spoofing.
 - [x] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`,
       `{url path="/foo"}`, `{asset path="img.png"}`.
-- [ ] **Translations** — `{lang key="messages.welcome"}` plus a `|trans`
+- [x] **Translations** — `{lang key="messages.welcome"}` plus a `|trans`
       modifier for the inline form.
 - [ ] **`old()`** — `{old field="email" default=$user->email}` for repopulating
       forms after validation failure.
