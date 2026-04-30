@@ -200,7 +200,7 @@ Ordered roughly by impact.
       `<input type="hidden" name="_token" value="...">`.
 - [x] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form
       method spoofing.
-- [ ] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`,
+- [x] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`,
       `{url path="/foo"}`, `{asset path="img.png"}`.
 - [ ] **Translations** — `{lang key="messages.welcome"}` plus a `|trans`
       modifier for the inline form.
