@@ -138,6 +138,60 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing
 Both directories are created automatically via Laravel's
 `Filesystem::ensureDirectoryExists()` if missing.
 
+## Artisan commands
+
+Three commands ship for managing Smarty's compile and cache directories.
+They share the same Smarty instance the runtime uses, so configuration,
+plugins, and paths all match what `view()` sees.
+
+### `smarty:optimize`
+
+Pre-compiles every template found under the configured view paths. Useful
+in deploy pipelines to amortise the first-render compile cost.
+
+```bash
+php artisan smarty:optimize
+php artisan smarty:optimize --extension=tpl
+php artisan smarty:optimize --force          # recompile even if up to date
+```
+
+| Option        | Description |
+|---------------|-------------|
+| `--extension` | Template extension to scan. Defaults to `smarty.extension`. |
+| `--force`     | Recompile even when compiled output is current. |
+
+### `smarty:clear-compiled`
+
+Removes compiled `.tpl.php` files from `smarty.compile_path`.
+
+```bash
+php artisan smarty:clear-compiled
+php artisan smarty:clear-compiled --file=welcome.tpl
+```
+
+| Option         | Description |
+|----------------|-------------|
+| `--file`       | Clear compiled output for one specific template. |
+| `--compile-id` | Restrict to a specific `compile_id`. |
+| `--expire`     | Only clear entries older than N seconds. |
+
+### `smarty:clear-cache`
+
+Clears Smarty's rendered output cache (only relevant when `smarty.caching`
+is enabled).
+
+```bash
+php artisan smarty:clear-cache
+php artisan smarty:clear-cache --file=welcome.tpl --cache-id=user.42
+```
+
+| Option         | Description |
+|----------------|-------------|
+| `--file`       | Clear cache for one specific template. |
+| `--cache-id`   | Restrict to a `cache_id` group. |
+| `--compile-id` | Restrict to a `compile_id`. |
+| `--expire`     | Only clear entries older than N seconds. |
+
 ## Custom modifiers and plugins
 
 Drop a file into a directory listed in `plugins_paths`:

@@ -4,6 +4,7 @@ namespace Vusys\LaravelSmarty;
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Factory as ViewFactory;
 
 class SmartyServiceProvider extends ServiceProvider
@@ -15,6 +16,12 @@ class SmartyServiceProvider extends ServiceProvider
         $this->app->singleton(SmartyFactory::class, function ($app) {
             return new SmartyFactory($app['files'], $app['config']->get('smarty'));
         });
+
+        // The view engine resolver is bound by Laravel as a string-keyed
+        // singleton. Alias the class so DI consumers (notably the artisan
+        // commands) get the same instance our boot() registered "smarty" on,
+        // not a fresh empty resolver auto-built by the container.
+        $this->app->alias('view.engine.resolver', EngineResolver::class);
     }
 
     public function boot(): void
@@ -26,6 +33,14 @@ class SmartyServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views/pagination', 'pagination');
 
         $this->registerEngine();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                Console\ClearCacheCommand::class,
+                Console\ClearCompiledCommand::class,
+                Console\OptimizeCommand::class,
+            ]);
+        }
     }
 
     protected function registerEngine(): void
