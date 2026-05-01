@@ -259,45 +259,11 @@ View::composer('layouts.main', function ($view) {
 });
 ```
 
-Caveat: data added by a composer to a sub-template's `View` instance is **not** currently propagated back into Smarty's variable scope — Smarty maintains its own data store and we only synthesise `View` objects so listeners can observe the template tree. View composers that *only* observe (logging, metrics, Debugbar) work today; composers that mutate template data are on the roadmap.
+Caveat: data added by a composer to a sub-template's `View` instance is **not** currently propagated back into Smarty's variable scope — Smarty maintains its own data store and we only synthesise `View` objects so listeners can observe the template tree. View composers that *only* observe (logging, metrics, Debugbar) work today; composers that mutate template data are a known limitation.
 
-### Debugbar
+### Debug tooling
 
-If `barryvdh/laravel-debugbar` is installed, its **Views** tab will list every template rendered for the request — entry, layout, and partials — exactly like it does for Blade.
-
-## Roadmap
-
-The following Blade features are not yet exposed as Smarty equivalents. Ordered roughly by impact.
-
-### High priority — basic forms and routing
-
-- [x] **`@csrf` equivalent** — Smarty function `{csrf_field}` emitting `<input type="hidden" name="_token" value="...">`.
-- [x] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form method spoofing.
-- [x] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`, `{url path="/foo"}`, `{asset path="img.png"}`.
-- [x] **Translations** — `{lang key="messages.welcome"}` plus a `|trans` modifier for the inline form.
-- [x] **`old()`** — `{old field="email" default=$user->email}` for repopulating forms after validation failure.
-- [x] **Auto-escape by default** — enable `setEscapeHtml(true)` so `{$var}` is `e()`'d like Blade's `{{ }}`. Configurable for opt-out via `smarty.escape_html`.
-
-### Medium priority — auth, validation, layout
-
-- [x] **`@auth` / `@guest`** — block tags `{auth}…{/auth}` and `{guest}…{/guest}`. Optional `guard="api"` parameter.
-- [x] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus `{cannot}` for the inverse.
-- [x] **`@error('field')`** — short-circuit access to the first validation error: `{error field="email"}<p class="err">{$message}</p>{/error}`.
-- [ ] **`@push` / `@stack`** — cross-template accumulation of scripts/styles. Smarty's `{capture}` is per-template; stacks aggregate across the whole inheritance + include tree.
-- [x] **Pagination templates** — ship `views/pagination/*.tpl` and register them so `$paginator->links()` works without falling back to Blade. Tailwind, Bootstrap 3/4/5 (full + simple) and Semantic UI variants are all included.
-- [ ] **View composer data flow-through** — propagate composer-injected data from sub-template `View` instances back into Smarty's variable scope.
-
-### Low priority — quality of life
-
-- [x] **`@json($data)`** — `|json` modifier delegating to `Js::from()` for safe JS embedding. Use with `nofilter` to bypass auto-escape inside `<script>`: `var data = {$posts|json nofilter};`.
-- [x] **`@inject`** — `{service name="App\\Services\\Metrics" assign="metrics"}`.
-- [x] **`@dump` / `@dd`** — wire to Laravel's `dump()` / `dd()` helpers. Usage: `{dump value=$user}`, `{dd value=$user}`.
-
-### Architecturally interesting — own milestone
-
-- [ ] **Blade components and slots** — Smarty has no native class-backed component system. Two routes worth considering:
-  - Document `{include}` + `{block}` as the substitute and stop there.
-  - Build a thin component bridge so `<x-foo>` resolves to a Smarty template + companion class with slot support. Real work, debatable scope; would need its own RFC.
+`creating:` and `composing:` view events fire for every template Smarty loads — entries, `{extends}` parents, and `{include}` partials — so anything in the Laravel ecosystem that listens to those events sees the full render tree. Debugbar's **Views** tab, Telescope's **Views** watcher, and any other tool that hooks Laravel's view events should work without extra wiring, the same way they do for Blade.
 
 ## Development
 
