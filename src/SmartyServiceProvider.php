@@ -13,7 +13,7 @@ class SmartyServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/smarty.php', 'smarty');
 
-        $this->app->singleton(SmartyFactory::class, fn ($app) => new SmartyFactory($app['files'], $app['config']->get('smarty')));
+        $this->app->singleton(SmartyFactory::class, fn ($app) => new SmartyFactory($app->make('files'), $app->make('config')->get('smarty')));
 
         // The view engine resolver is bound by Laravel as a string-keyed
         // singleton. Alias the class so DI consumers (notably the artisan
@@ -43,20 +43,20 @@ class SmartyServiceProvider extends ServiceProvider
 
     protected function registerEngine(): void
     {
-        $extension = $this->app['config']->get('smarty.extension', 'tpl');
+        $extension = $this->app->make('config')->get('smarty.extension', 'tpl');
 
-        $this->app['view.engine.resolver']->register('smarty', function () use ($extension) {
+        $this->app->make('view.engine.resolver')->register('smarty', function () use ($extension) {
             $smartyFactory = $this->app->make(SmartyFactory::class);
-            $paths = $this->app['config']->get('view.paths', []);
+            $paths = $this->app->make('config')->get('view.paths', []);
             $smarty = $smartyFactory->make($paths);
 
-            $engine = new SmartyEngine($smarty, $this->app['files']);
+            $engine = new SmartyEngine($smarty, $this->app->make('files'));
 
             /** @var ViewFactory $viewFactory */
             $viewFactory = $this->app->make(ViewFactoryContract::class);
             $resource = new SmartyResource(
                 $viewFactory,
-                $this->app['events'],
+                $this->app->make('events'),
                 $engine,
                 $extension,
             );

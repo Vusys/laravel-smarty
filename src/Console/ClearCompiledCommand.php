@@ -22,10 +22,12 @@ class ClearCompiledCommand extends Command
         $smarty = $engine->smarty();
 
         $expire = $this->option('expire') !== null ? (int) $this->option('expire') : null;
+        $file = $this->option('file');
+        $compileId = $this->option('compile-id');
 
         $count = $smarty->clearCompiledTemplate(
-            $this->option('file'),
-            $this->option('compile-id'),
+            is_string($file) ? $file : null,
+            is_string($compileId) ? $compileId : null,
             $expire,
         );
 

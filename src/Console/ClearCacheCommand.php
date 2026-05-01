@@ -24,9 +24,11 @@ class ClearCacheCommand extends Command
 
         $expire = $this->option('expire') !== null ? (int) $this->option('expire') : null;
         $file = $this->option('file');
+        $cacheId = $this->option('cache-id');
+        $compileId = $this->option('compile-id');
 
-        $count = $file
-            ? $smarty->clearCache($file, $this->option('cache-id'), $this->option('compile-id'), $expire)
+        $count = is_string($file) && $file !== ''
+            ? $smarty->clearCache($file, is_string($cacheId) ? $cacheId : null, is_string($compileId) ? $compileId : null, $expire)
             : $smarty->clearAllCache($expire);
 
         $this->info("Cleared {$count} Smarty cache file(s).");
