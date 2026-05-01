@@ -49,7 +49,7 @@ class SmartyServiceProvider extends ServiceProvider
         $this->app->make('view.engine.resolver')->register('smarty', function () use ($extension) {
             $smartyFactory = $this->app->make(SmartyFactory::class);
             $pathsRaw = $this->app->make('config')->get('view.paths', []);
-            $paths = is_array($pathsRaw) ? array_values(array_filter($pathsRaw, 'is_string')) : [];
+            $paths = is_array($pathsRaw) ? array_values(array_filter($pathsRaw, is_string(...))) : [];
             $smarty = $smartyFactory->make($paths);
 
             $engine = new SmartyEngine($smarty, $this->app->make('files'));

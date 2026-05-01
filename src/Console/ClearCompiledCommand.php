@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Console;
 
 use Illuminate\Console\Command;
