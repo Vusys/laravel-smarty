@@ -48,7 +48,9 @@ jobs:
             composer-php${{ matrix.php }}-laravel${{ matrix.laravel }}-
 
       - name: Pin matrix versions
-        run: composer require --dev --no-update "laravel/framework:^${{ matrix.laravel }}" "orchestra/testbench:^${{ matrix.testbench }}"
+        run: |
+          composer remove --dev --no-update larastan/larastan rector/rector driftingly/rector-laravel laravel/pint
+          composer require --dev --no-update "laravel/framework:^${{ matrix.laravel }}" "orchestra/testbench:^${{ matrix.testbench }}"
 
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
