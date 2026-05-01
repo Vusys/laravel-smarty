@@ -1,8 +1,8 @@
 # laravel-smarty
 
 [![Tests](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml/badge.svg)](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml)
-[![PHP](https://img.shields.io/badge/php-%5E8.3-777BB4?logo=php&logoColor=white)](composer.json)
-[![Laravel](https://img.shields.io/badge/laravel-11%20%7C%2012%20%7C%2013-FF2D20?logo=laravel)](composer.json)
+[![PHP](https://img.shields.io/badge/php-%5E8.1-777BB4?logo=php&logoColor=white)](composer.json)
+[![Laravel](https://img.shields.io/badge/laravel-10%20%7C%2011%20%7C%2012%20%7C%2013-FF2D20?logo=laravel)](composer.json)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine
@@ -45,8 +45,8 @@ that renders Smarty under the hood.
 
 ## Requirements
 
-- PHP `^8.3`
-- Laravel `^11 | ^12 | ^13`
+- PHP `^8.1`
+- Laravel `^10 | ^11 | ^12 | ^13`
 - `smarty/smarty` `^5.4`
 
 ## Installation
