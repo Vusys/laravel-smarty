@@ -3,6 +3,9 @@
 [![Tests](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml/badge.svg)](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml)
 [![PHP](https://img.shields.io/badge/php-%5E8.1-777BB4?logo=php&logoColor=white)](composer.json)
 [![Laravel](https://img.shields.io/badge/laravel-10%20%7C%2011%20%7C%2012%20%7C%2013-FF2D20?logo=laravel)](composer.json)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%206-brightgreen.svg)](phpstan.neon)
+[![Rector](https://img.shields.io/badge/Rector-passing-brightgreen.svg)](rector.php)
+[![Code Style: Pint](https://img.shields.io/badge/code%20style-Laravel%20Pint-FF2D20.svg?logo=laravel)](https://github.com/laravel/pint)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine
@@ -318,6 +321,21 @@ vendor/bin/phpunit
 Tests cover engine rendering, the Smarty-before-Blade extension priority,
 the resolver wiring, and `composing:`/`creating:` event firing for parents
 and includes.
+
+### Static analysis & code style
+
+Three tools run on every pull request via the `Static analysis & code
+style` CI job, and are available locally via composer scripts:
+
+| Command                  | Tool                                              | Purpose                                                                    |
+|--------------------------|---------------------------------------------------|----------------------------------------------------------------------------|
+| `composer analyse`       | [Larastan](https://github.com/larastan/larastan)  | PHPStan + Laravel rules, currently at level 6 (see `phpstan.neon`).        |
+| `composer rector:check`  | [Rector](https://github.com/rectorphp/rector) + [rector-laravel](https://github.com/driftingly/rector-laravel) | Dry-run automated refactors using version-agnostic quality sets only — Laravel level sets are intentionally excluded so we don't rewrite code into a Laravel-13-only shape and break older support. |
+| `composer pint:check`    | [Laravel Pint](https://github.com/laravel/pint)   | Default Laravel preset, no `pint.json` overrides.                          |
+
+Apply fixes locally with `composer rector` and `composer pint`. The CI
+job runs all three with `--test` / `--dry-run`, so any drift fails the
+build.
 
 ## License
 
