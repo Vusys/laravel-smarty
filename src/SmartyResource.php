@@ -30,7 +30,8 @@ class SmartyResource
 
     public function fireForTemplate(Template $tpl): void
     {
-        $path = $tpl->getSource()->getFilepath();
+        $source = $tpl->getSource();
+        $path = $source?->getFilepath();
 
         if ($path === null || $path === '') {
             return;
@@ -59,7 +60,7 @@ class SmartyResource
 
     protected function logicalName(string $relative): string
     {
-        $relative = preg_replace('/\.'.preg_quote($this->extension, '/').'$/', '', $relative);
+        $relative = preg_replace('/\.'.preg_quote($this->extension, '/').'$/', '', $relative) ?? $relative;
 
         return str_replace('/', '.', $relative);
     }

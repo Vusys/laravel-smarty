@@ -4,7 +4,7 @@ includes:
 parameters:
     paths:
         - src
-    level: 7
+    level: 8
     ignoreErrors:
         # Upstream PHPDoc on Smarty::createTemplate() declares $parent as null,
         # but the implementation accepts a Smarty/Template object (and uses it).
