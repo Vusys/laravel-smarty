@@ -2,8 +2,8 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
-use Vusys\LaravelSmarty\Tests\TestCase;
 use Illuminate\Support\Facades\Route;
+use Vusys\LaravelSmarty\Tests\TestCase;
 
 class UrlHelpersTest extends TestCase
 {

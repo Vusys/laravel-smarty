@@ -2,8 +2,8 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
-use Vusys\LaravelSmarty\Tests\TestCase;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Vusys\LaravelSmarty\Tests\TestCase;
 
 class AuthBlocksTest extends TestCase
 {

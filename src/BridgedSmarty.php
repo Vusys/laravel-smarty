@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty;
 
 use Smarty\Smarty;
@@ -21,6 +23,15 @@ class BridgedSmarty extends Smarty
         $this->resource = $resource;
     }
 
+    /**
+     * @param  string|Template|null  $resource_name
+     * @param  mixed  $cache_id
+     * @param  mixed  $compile_id
+     * @param  Smarty|Template|null  $parent
+     * @param  int|null  $caching
+     * @param  int|null  $cache_lifetime
+     * @param  array<string, mixed>  $data
+     */
     public function doCreateTemplate(
         $resource_name,
         $cache_id = null,
@@ -39,7 +50,7 @@ class BridgedSmarty extends Smarty
         // (extends parent or include partial). When called directly from the
         // SmartyEngine entry point, $parent is the Smarty instance itself, so
         // we don't fire — Laravel already fired events for the entry view.
-        if ($parent instanceof Template && $this->resource !== null && ! $isConfig) {
+        if ($parent instanceof Template && $this->resource instanceof SmartyResource && ! $isConfig) {
             $this->resource->fireForTemplate($tpl);
         }
 

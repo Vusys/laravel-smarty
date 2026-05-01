@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+    level: 6
+    ignoreErrors:
+        # Upstream PHPDoc on Smarty::createTemplate() declares $parent as null,
+        # but the implementation accepts a Smarty/Template object (and uses it).
+        - identifier: argument.type
+          message: '#Parameter \#4 \$parent of method Smarty\\Smarty::createTemplate\(\) expects null, Smarty\\Smarty given\.#'
+          path: src/SmartyEngine.php

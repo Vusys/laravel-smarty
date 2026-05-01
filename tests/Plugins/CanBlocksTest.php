@@ -2,9 +2,9 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
-use Vusys\LaravelSmarty\Tests\TestCase;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Gate;
+use Vusys\LaravelSmarty\Tests\TestCase;
 
 class CanBlocksTest extends TestCase
 {

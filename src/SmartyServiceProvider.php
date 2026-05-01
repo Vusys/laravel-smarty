@@ -13,9 +13,7 @@ class SmartyServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/smarty.php', 'smarty');
 
-        $this->app->singleton(SmartyFactory::class, function ($app) {
-            return new SmartyFactory($app['files'], $app['config']->get('smarty'));
-        });
+        $this->app->singleton(SmartyFactory::class, fn ($app) => new SmartyFactory($app['files'], $app['config']->get('smarty')));
 
         // The view engine resolver is bound by Laravel as a string-keyed
         // singleton. Alias the class so DI consumers (notably the artisan

@@ -2,8 +2,8 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
-use Vusys\LaravelSmarty\Tests\TestCase;
 use Illuminate\Support\Facades\Lang;
+use Vusys\LaravelSmarty\Tests\TestCase;
 
 class LangTest extends TestCase
 {

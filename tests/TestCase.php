@@ -2,9 +2,9 @@
 
 namespace Vusys\LaravelSmarty\Tests;
 
-use Vusys\LaravelSmarty\SmartyServiceProvider;
 use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use Vusys\LaravelSmarty\SmartyServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
 {

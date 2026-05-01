@@ -15,12 +15,8 @@ class UrlPlugins
             return route($name, $params);
         });
 
-        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'url', static function (array $params): string {
-            return url($params['path'] ?? '');
-        });
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'url', static fn (array $params): string => url($params['path'] ?? ''));
 
-        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'asset', static function (array $params): string {
-            return asset($params['path'] ?? '');
-        });
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'asset', static fn (array $params): string => asset($params['path'] ?? ''));
     }
 }

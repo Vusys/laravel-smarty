@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Console;
 
 use Illuminate\Console\Command;
@@ -22,7 +24,7 @@ class OptimizeCommand extends Command
         $smarty = $engine->smarty();
 
         $extension = '.'.ltrim(
-            $this->option('extension') ?? $config->get('smarty.extension', 'tpl'),
+            (string) ($this->option('extension') ?? $config->get('smarty.extension', 'tpl')),
             '.',
         );
 
