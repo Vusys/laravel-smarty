@@ -43,11 +43,13 @@ class SmartyServiceProvider extends ServiceProvider
 
     protected function registerEngine(): void
     {
-        $extension = $this->app->make('config')->get('smarty.extension', 'tpl');
+        $extensionRaw = $this->app->make('config')->get('smarty.extension', 'tpl');
+        $extension = is_string($extensionRaw) ? $extensionRaw : 'tpl';
 
         $this->app->make('view.engine.resolver')->register('smarty', function () use ($extension) {
             $smartyFactory = $this->app->make(SmartyFactory::class);
-            $paths = $this->app->make('config')->get('view.paths', []);
+            $pathsRaw = $this->app->make('config')->get('view.paths', []);
+            $paths = is_array($pathsRaw) ? array_values(array_filter($pathsRaw, 'is_string')) : [];
             $smarty = $smartyFactory->make($paths);
 
             $engine = new SmartyEngine($smarty, $this->app->make('files'));

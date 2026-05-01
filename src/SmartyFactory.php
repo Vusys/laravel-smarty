@@ -6,10 +6,28 @@ use Illuminate\Filesystem\Filesystem;
 use Smarty\Smarty;
 use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
 
+/**
+ * @phpstan-type SmartyConfig array{
+ *     extension?: string,
+ *     compile_path: string,
+ *     cache_path: string,
+ *     caching: bool,
+ *     cache_lifetime: int,
+ *     force_compile: bool,
+ *     debugging: bool,
+ *     escape_html?: bool,
+ *     plugins_paths: list<string>,
+ *     left_delimiter?: string|null,
+ *     right_delimiter?: string|null,
+ *     compile_check?: bool,
+ *     default_modifiers?: list<string>|string,
+ *     error_reporting?: int|null,
+ * }
+ */
 class SmartyFactory
 {
     /**
-     * @var array<int, callable(Smarty, array<string, mixed>): void>
+     * @var array<int, callable(Smarty, SmartyConfig): void>
      */
     protected static array $configurators = [];
 
@@ -20,7 +38,7 @@ class SmartyFactory
      * keys we don't expose, swap the cache resource, register custom
      * plugins, or apply a security policy — anything Smarty supports.
      *
-     * @param  callable(Smarty, array<string, mixed>): void  $callback
+     * @param  callable(Smarty, SmartyConfig): void  $callback
      */
     public static function configure(callable $callback): void
     {
@@ -36,7 +54,7 @@ class SmartyFactory
     }
 
     /**
-     * @param  array<string, mixed>  $config
+     * @param  SmartyConfig  $config
      */
     public function __construct(
         protected Filesystem $files,

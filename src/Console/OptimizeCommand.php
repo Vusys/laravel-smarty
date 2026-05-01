@@ -23,10 +23,8 @@ class OptimizeCommand extends Command
         $engine = $resolver->resolve('smarty');
         $smarty = $engine->smarty();
 
-        $extension = '.'.ltrim(
-            (string) ($this->option('extension') ?? $config->get('smarty.extension', 'tpl')),
-            '.',
-        );
+        $ext = $this->option('extension') ?? $config->get('smarty.extension', 'tpl');
+        $extension = '.'.ltrim(is_string($ext) ? $ext : 'tpl', '.');
 
         // Smarty writes a per-file progress trail to stdout. Capture so we can
         // route it through the Symfony console output instead of leaking past it.

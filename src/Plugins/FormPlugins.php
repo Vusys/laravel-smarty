@@ -2,6 +2,7 @@
 
 namespace Vusys\LaravelSmarty\Plugins;
 
+use Illuminate\Support\ViewErrorBag;
 use Smarty\Smarty;
 use Smarty\Template;
 
@@ -20,12 +21,13 @@ class FormPlugins
 
             $field = $params['field'] ?? '';
             $errors = session('errors');
-            $hasError = $errors && $errors->has($field);
+            $bag = $errors instanceof ViewErrorBag ? $errors->getBag('default') : null;
+            $hasError = $bag !== null && $bag->has($field);
 
             if ($repeat) {
                 if ($hasError) {
                     $stack[] = $template->getTemplateVars('message');
-                    $template->assign('message', $errors->first($field));
+                    $template->assign('message', $bag->first($field));
                 }
 
                 return '';
