@@ -8,11 +8,17 @@ use Smarty\Smarty;
 
 class SmartyFactory
 {
+    /**
+     * @param  array<string, mixed>  $config
+     */
     public function __construct(
         protected Filesystem $files,
         protected array $config,
     ) {}
 
+    /**
+     * @param  array<int, string>  $templatePaths
+     */
     public function make(array $templatePaths): BridgedSmarty
     {
         $smarty = new BridgedSmarty;

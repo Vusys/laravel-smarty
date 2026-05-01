@@ -13,6 +13,10 @@ class SmartyEngine implements Engine
         protected Filesystem $files,
     ) {}
 
+    /**
+     * @param  string  $path
+     * @param  array<string, mixed>  $data
+     */
     public function get($path, array $data = []): string
     {
         $directory = $this->files->dirname($path);

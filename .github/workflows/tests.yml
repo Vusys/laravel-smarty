@@ -55,3 +55,32 @@ jobs:
 
       - name: Run tests
         run: vendor/bin/phpunit
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    name: Static analysis (Larastan)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, intl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-static-analysis-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-static-analysis-
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run Larastan
+        run: vendor/bin/phpstan analyse --no-progress --error-format=github
