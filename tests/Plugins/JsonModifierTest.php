@@ -24,6 +24,6 @@ class JsonModifierTest extends TestCase
 
         $output = view('json', ['payload' => $payload])->render();
 
-        $this->assertSame('var x = '.((string) Js::from($payload)).";\n", $output);
+        $this->assertSame('var x = '.(Js::from($payload)).";\n", $output);
     }
 }
