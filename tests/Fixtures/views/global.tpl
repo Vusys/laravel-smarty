@@ -1,0 +1,1 @@
+Hello, {$global_user}!

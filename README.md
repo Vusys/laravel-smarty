@@ -8,43 +8,25 @@
 [![Code Style: Pint](https://img.shields.io/badge/code%20style-Laravel%20Pint-FF2D20.svg?logo=laravel)](https://github.com/laravel/pint)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine
-in a Laravel application.
+Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine in a Laravel application.
 
 ## Why this exists
 
-Blade is the right answer for most Laravel apps, but a few situations push
-teams towards Smarty:
+Blade is the right answer for most Laravel apps, but a few situations push teams towards Smarty:
 
-- **Migrating a legacy PHP app into Laravel** where thousands of `.tpl`
-  templates already exist and rewriting them all to Blade is not on the table.
-- **Designer / non-PHP authors** who already know Smarty's syntax and modifier
-  pipeline (`{$var|truncate:80|escape}`).
-- **Stricter sandboxing** — Smarty's security policy can lock down what
-  templates are allowed to do, which is harder to retrofit on Blade.
+- **Migrating a legacy PHP app into Laravel** where thousands of `.tpl` templates already exist and rewriting them all to Blade is not on the table.
+- **Designer / non-PHP authors** who already know Smarty's syntax and modifier pipeline (`{$var|truncate:80|escape}`).
+- **Stricter sandboxing** — Smarty's security policy can lock down what templates are allowed to do, which is harder to retrofit on Blade.
 - **Per-team preference** for Smarty's tag style and inheritance model.
 
-This package wires Smarty into Laravel's view machinery so you keep using
-`view('foo', $data)` from controllers and `view()` returns a `View` instance
-that renders Smarty under the hood.
+This package wires Smarty into Laravel's view machinery so you keep using `view('foo', $data)` from controllers and `view()` returns a `View` instance that renders Smarty under the hood.
 
 ## How it works
 
-- The `.tpl` extension is registered ahead of `.blade.php` on Laravel's view
-  finder, so `view('welcome')` resolves `welcome.tpl` first and falls back to
-  `welcome.blade.php` if no Smarty template exists. Both engines coexist —
-  this is a soft replacement, not a forced rewrite.
-- A `SmartyEngine` implements `Illuminate\Contracts\View\Engine` and is
-  registered on the `view.engine.resolver` for the `smarty` engine name.
-- A `SmartyFactory` builds a configured `Smarty` instance per resolver
-  invocation, wired up with the configured compile/cache directories,
-  caching settings, and plugin paths.
-- A `BridgedSmarty` subclass overrides `doCreateTemplate()` so that every
-  sub-template loaded via `{extends}` or `{include}` fires Laravel's
-  `creating:` and `composing:` events with a real `Illuminate\View\View`
-  instance. This means **view composers and `barryvdh/laravel-debugbar`'s
-  view collector see the full template tree** on every render — same surface
-  Blade exposes, even when Smarty's compile cache is warm.
+- The `.tpl` extension is registered ahead of `.blade.php` on Laravel's view finder, so `view('welcome')` resolves `welcome.tpl` first and falls back to `welcome.blade.php` if no Smarty template exists. Both engines coexist — this is a soft replacement, not a forced rewrite.
+- A `SmartyEngine` implements `Illuminate\Contracts\View\Engine` and is registered on the `view.engine.resolver` for the `smarty` engine name.
+- A `SmartyFactory` builds a configured `Smarty` instance per resolver invocation, wired up with the configured compile/cache directories, caching settings, and plugin paths.
+- A `BridgedSmarty` subclass overrides `doCreateTemplate()` so that every sub-template loaded via `{extends}` or `{include}` fires Laravel's `creating:` and `composing:` events with a real `Illuminate\View\View` instance. This means **view composers and `barryvdh/laravel-debugbar`'s view collector see the full template tree** on every render — same surface Blade exposes, even when Smarty's compile cache is warm.
 
 ## Requirements
 
@@ -91,8 +73,7 @@ Route::get('/', fn () => view('welcome', [
 ]));
 ```
 
-Smarty resolves before Blade, so a `welcome.tpl` overrides an existing
-`welcome.blade.php` for the same view name.
+Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.blade.php` for the same view name.
 
 ### Template inheritance
 
@@ -137,20 +118,62 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing
 | `debugging`     | `false`                                        | Smarty's debug console. |
 | `escape_html`   | `true`                                         | Auto-escape `{$var}` outputs through `htmlspecialchars()`, matching Blade's `{{ }}`. Set to `false` to require explicit `\|escape`. |
 | `plugins_paths` | `[]`                                           | Extra directories scanned for Smarty plugins. |
+| `left_delimiter` / `right_delimiter` | `null`                    | Override Smarty's `{` / `}` delimiters. Useful next to inline JavaScript using the same braces. Leave `null` for defaults. |
+| `compile_check` | `true`                                         | Recheck template mtimes on every render. Disable in production for a small per-render win — at the cost of needing an explicit `smarty:clear-compiled` after a deploy. |
+| `default_modifiers` | `[]`                                       | Modifiers applied automatically to every `{$var}` output (e.g. `['strip']`). |
+| `error_reporting`| `null`                                        | `error_reporting()`-style bitmask Smarty applies while rendering. `null` leaves PHP's level untouched. |
 
-Both directories are created automatically via Laravel's
-`Filesystem::ensureDirectoryExists()` if missing.
+Both directories are created automatically via Laravel's `Filesystem::ensureDirectoryExists()` if missing.
+
+### Customising Smarty further
+
+The keys above cover the common cases on purpose — this package is deliberately smaller-surface than wrapping every native Smarty option. For everything else (security policy, custom cache resource, registering your own plugins or filters, swapping the resource handler, tweaking obscure flags), register a configurator from a service provider's `boot()`:
+
+```php
+use Smarty\Smarty;
+use Vusys\LaravelSmarty\SmartyFactory;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        SmartyFactory::configure(function (Smarty $smarty, array $config): void {
+            // 1) Anything Smarty exposes a setter for.
+            $smarty->setMergeCompiledIncludes(true);
+            $smarty->setAutoLiteral(false);
+
+            // 2) Lock templates down with Smarty's security policy.
+            $policy = new \Smarty\Security($smarty);
+            $policy->php_modifiers = ['count'];
+            $policy->disabled_tags = ['php'];
+            $smarty->enableSecurity($policy);
+
+            // 3) Register custom plugins next to the built-in ones.
+            $smarty->registerPlugin(
+                Smarty::PLUGIN_MODIFIER,
+                'currency',
+                fn ($amount, $symbol = '£') => $symbol.number_format((float) $amount, 2),
+            );
+
+            // 4) Swap the output cache resource for a custom one.
+            $smarty->registerCacheResource('redis', new \App\Smarty\RedisCacheResource);
+            $smarty->setCachingType('redis');
+        });
+    }
+}
+```
+
+The callback fires once per Smarty instance, after the curated config and built-in plugins have been applied — your code has the final say. The second argument is the resolved `smarty.*` config array, so you can branch on environment-specific values without re-reading `config()`.
+
+Why a service-provider hook and not a closure in `config/smarty.php`? Closures aren't serialisable, so they would silently break `php artisan config:cache`. A static `configure()` call from a service provider stays cache-safe.
 
 ## Artisan commands
 
-Three commands ship for managing Smarty's compile and cache directories.
-They share the same Smarty instance the runtime uses, so configuration,
-plugins, and paths all match what `view()` sees.
+Three commands ship for managing Smarty's compile and cache directories. They share the same Smarty instance the runtime uses, so configuration, plugins, and paths all match what `view()` sees.
 
 ### `smarty:optimize`
 
-Pre-compiles every template found under the configured view paths. Useful
-in deploy pipelines to amortise the first-render compile cost.
+Pre-compiles every template found under the configured view paths. Useful in deploy pipelines to amortise the first-render compile cost.
 
 ```bash
 php artisan smarty:optimize
@@ -180,8 +203,7 @@ php artisan smarty:clear-compiled --file=welcome.tpl
 
 ### `smarty:clear-cache`
 
-Clears Smarty's rendered output cache (only relevant when `smarty.caching`
-is enabled).
+Clears Smarty's rendered output cache (only relevant when `smarty.caching` is enabled).
 
 ```bash
 php artisan smarty:clear-cache
@@ -223,16 +245,13 @@ Use it in any template:
 {$post.price|currency:"$"}  {* $4.50    *}
 ```
 
-The same convention applies to `function.<name>.php`, `block.<name>.php`,
-etc. — see the [Smarty plugin docs](https://www.smarty.net/docs/en/plugins.tpl).
+The same convention applies to `function.<name>.php`, `block.<name>.php`, etc. — see the [Smarty plugin docs](https://www.smarty.net/docs/en/plugins.tpl).
 
 ## Laravel integration
 
 ### View composers
 
-`composing:` and `creating:` events fire for every template Smarty loads,
-including `{extends}` parents and `{include}` partials, so view composers
-work the same as they do for Blade:
+`composing:` and `creating:` events fire for every template Smarty loads, including `{extends}` parents and `{include}` partials, so view composers work the same as they do for Blade:
 
 ```php
 View::composer('layouts.main', function ($view) {
@@ -240,74 +259,45 @@ View::composer('layouts.main', function ($view) {
 });
 ```
 
-Caveat: data added by a composer to a sub-template's `View` instance is **not**
-currently propagated back into Smarty's variable scope — Smarty maintains its
-own data store and we only synthesise `View` objects so listeners can observe
-the template tree. View composers that *only* observe (logging, metrics,
-Debugbar) work today; composers that mutate template data are on the roadmap.
+Caveat: data added by a composer to a sub-template's `View` instance is **not** currently propagated back into Smarty's variable scope — Smarty maintains its own data store and we only synthesise `View` objects so listeners can observe the template tree. View composers that *only* observe (logging, metrics, Debugbar) work today; composers that mutate template data are on the roadmap.
 
 ### Debugbar
 
-If `barryvdh/laravel-debugbar` is installed, its **Views** tab will list every
-template rendered for the request — entry, layout, and partials — exactly like
-it does for Blade.
+If `barryvdh/laravel-debugbar` is installed, its **Views** tab will list every template rendered for the request — entry, layout, and partials — exactly like it does for Blade.
 
 ## Roadmap
 
-The following Blade features are not yet exposed as Smarty equivalents.
-Ordered roughly by impact.
+The following Blade features are not yet exposed as Smarty equivalents. Ordered roughly by impact.
 
 ### High priority — basic forms and routing
 
-- [x] **`@csrf` equivalent** — Smarty function `{csrf_field}` emitting
-      `<input type="hidden" name="_token" value="...">`.
-- [x] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form
-      method spoofing.
-- [x] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`,
-      `{url path="/foo"}`, `{asset path="img.png"}`.
-- [x] **Translations** — `{lang key="messages.welcome"}` plus a `|trans`
-      modifier for the inline form.
-- [x] **`old()`** — `{old field="email" default=$user->email}` for repopulating
-      forms after validation failure.
-- [x] **Auto-escape by default** — enable `setEscapeHtml(true)` so `{$var}`
-      is `e()`'d like Blade's `{{ }}`. Configurable for opt-out via
-      `smarty.escape_html`.
+- [x] **`@csrf` equivalent** — Smarty function `{csrf_field}` emitting `<input type="hidden" name="_token" value="...">`.
+- [x] **`@method('PUT')` equivalent** — `{method_field method="PUT"}` for form method spoofing.
+- [x] **Route / URL / asset helpers** — `{route name="users.show" id=$user->id}`, `{url path="/foo"}`, `{asset path="img.png"}`.
+- [x] **Translations** — `{lang key="messages.welcome"}` plus a `|trans` modifier for the inline form.
+- [x] **`old()`** — `{old field="email" default=$user->email}` for repopulating forms after validation failure.
+- [x] **Auto-escape by default** — enable `setEscapeHtml(true)` so `{$var}` is `e()`'d like Blade's `{{ }}`. Configurable for opt-out via `smarty.escape_html`.
 
 ### Medium priority — auth, validation, layout
 
-- [x] **`@auth` / `@guest`** — block tags `{auth}…{/auth}` and
-      `{guest}…{/guest}`. Optional `guard="api"` parameter.
-- [x] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus
-      `{cannot}` for the inverse.
-- [x] **`@error('field')`** — short-circuit access to the first validation
-      error: `{error field="email"}<p class="err">{$message}</p>{/error}`.
-- [ ] **`@push` / `@stack`** — cross-template accumulation of scripts/styles.
-      Smarty's `{capture}` is per-template; stacks aggregate across the
-      whole inheritance + include tree.
-- [x] **Pagination templates** — ship `views/pagination/*.tpl` and register
-      them so `$paginator->links()` works without falling back to Blade.
-      Tailwind, Bootstrap 3/4/5 (full + simple) and Semantic UI variants
-      are all included.
-- [ ] **View composer data flow-through** — propagate composer-injected data
-      from sub-template `View` instances back into Smarty's variable scope.
+- [x] **`@auth` / `@guest`** — block tags `{auth}…{/auth}` and `{guest}…{/guest}`. Optional `guard="api"` parameter.
+- [x] **`@can`** — block tag `{can ability="update" model=$post}…{/can}` plus `{cannot}` for the inverse.
+- [x] **`@error('field')`** — short-circuit access to the first validation error: `{error field="email"}<p class="err">{$message}</p>{/error}`.
+- [ ] **`@push` / `@stack`** — cross-template accumulation of scripts/styles. Smarty's `{capture}` is per-template; stacks aggregate across the whole inheritance + include tree.
+- [x] **Pagination templates** — ship `views/pagination/*.tpl` and register them so `$paginator->links()` works without falling back to Blade. Tailwind, Bootstrap 3/4/5 (full + simple) and Semantic UI variants are all included.
+- [ ] **View composer data flow-through** — propagate composer-injected data from sub-template `View` instances back into Smarty's variable scope.
 
 ### Low priority — quality of life
 
-- [x] **`@json($data)`** — `|json` modifier delegating to `Js::from()` for safe
-      JS embedding. Use with `nofilter` to bypass auto-escape inside `<script>`:
-      `var data = {$posts|json nofilter};`.
+- [x] **`@json($data)`** — `|json` modifier delegating to `Js::from()` for safe JS embedding. Use with `nofilter` to bypass auto-escape inside `<script>`: `var data = {$posts|json nofilter};`.
 - [x] **`@inject`** — `{service name="App\\Services\\Metrics" assign="metrics"}`.
-- [x] **`@dump` / `@dd`** — wire to Laravel's `dump()` / `dd()` helpers.
-      Usage: `{dump value=$user}`, `{dd value=$user}`.
+- [x] **`@dump` / `@dd`** — wire to Laravel's `dump()` / `dd()` helpers. Usage: `{dump value=$user}`, `{dd value=$user}`.
 
 ### Architecturally interesting — own milestone
 
-- [ ] **Blade components and slots** — Smarty has no native class-backed
-      component system. Two routes worth considering:
+- [ ] **Blade components and slots** — Smarty has no native class-backed component system. Two routes worth considering:
   - Document `{include}` + `{block}` as the substitute and stop there.
-  - Build a thin component bridge so `<x-foo>` resolves to a Smarty
-      template + companion class with slot support. Real work, debatable
-      scope; would need its own RFC.
+  - Build a thin component bridge so `<x-foo>` resolves to a Smarty template + companion class with slot support. Real work, debatable scope; would need its own RFC.
 
 ## Development
 
@@ -318,14 +308,11 @@ composer install
 vendor/bin/phpunit
 ```
 
-Tests cover engine rendering, the Smarty-before-Blade extension priority,
-the resolver wiring, and `composing:`/`creating:` event firing for parents
-and includes.
+Tests cover engine rendering, the Smarty-before-Blade extension priority, the resolver wiring, and `composing:`/`creating:` event firing for parents and includes.
 
 ### Static analysis & code style
 
-Three tools run on every pull request via the `Static analysis & code
-style` CI job, and are available locally via composer scripts:
+Three tools run on every pull request via the `Static analysis & code style` CI job, and are available locally via composer scripts:
 
 | Command                  | Tool                                              | Purpose                                                                    |
 |--------------------------|---------------------------------------------------|----------------------------------------------------------------------------|
@@ -333,9 +320,7 @@ style` CI job, and are available locally via composer scripts:
 | `composer rector:check`  | [Rector](https://github.com/rectorphp/rector) + [rector-laravel](https://github.com/driftingly/rector-laravel) | Dry-run automated refactors using version-agnostic quality sets only — Laravel level sets are intentionally excluded so we don't rewrite code into a Laravel-13-only shape and break older support. |
 | `composer pint:check`    | [Laravel Pint](https://github.com/laravel/pint)   | Default Laravel preset, no `pint.json` overrides.                          |
 
-Apply fixes locally with `composer rector` and `composer pint`. The CI
-job runs all three with `--test` / `--dry-run`, so any drift fails the
-build.
+Apply fixes locally with `composer rector` and `composer pint`. The CI job runs all three with `--test` / `--dry-run`, so any drift fails the build.
 
 ## License
 

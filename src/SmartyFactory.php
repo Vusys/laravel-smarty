@@ -9,6 +9,33 @@ use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
 class SmartyFactory
 {
     /**
+     * @var array<int, callable(Smarty, array<string, mixed>): void>
+     */
+    protected static array $configurators = [];
+
+    /**
+     * Register a callback that runs against every Smarty instance built by
+     * this factory, after the curated config and built-in plugins are
+     * applied. Use this from a service provider's boot() to reach config
+     * keys we don't expose, swap the cache resource, register custom
+     * plugins, or apply a security policy — anything Smarty supports.
+     *
+     * @param  callable(Smarty, array<string, mixed>): void  $callback
+     */
+    public static function configure(callable $callback): void
+    {
+        self::$configurators[] = $callback;
+    }
+
+    /**
+     * Drop all registered configurators. Intended for test teardown.
+     */
+    public static function flushConfigurators(): void
+    {
+        self::$configurators = [];
+    }
+
+    /**
      * @param  array<string, mixed>  $config
      */
     public function __construct(
@@ -37,12 +64,35 @@ class SmartyFactory
         $smarty->setForceCompile((bool) $this->config['force_compile']);
         $smarty->setDebugging((bool) $this->config['debugging']);
         $smarty->setEscapeHtml((bool) ($this->config['escape_html'] ?? true));
+        $smarty->setCompileCheck(
+            ($this->config['compile_check'] ?? true) ? Smarty::COMPILECHECK_ON : Smarty::COMPILECHECK_OFF
+        );
+
+        if (isset($this->config['left_delimiter'])) {
+            $smarty->setLeftDelimiter($this->config['left_delimiter']);
+        }
+
+        if (isset($this->config['right_delimiter'])) {
+            $smarty->setRightDelimiter($this->config['right_delimiter']);
+        }
+
+        if (! empty($this->config['default_modifiers'])) {
+            $smarty->setDefaultModifiers($this->config['default_modifiers']);
+        }
+
+        if (isset($this->config['error_reporting'])) {
+            $smarty->setErrorReporting($this->config['error_reporting']);
+        }
 
         foreach ($this->config['plugins_paths'] as $path) {
             $smarty->addPluginsDir($path);
         }
 
         LaravelPlugins::register($smarty);
+
+        foreach (self::$configurators as $configurator) {
+            $configurator($smarty, $this->config);
+        }
 
         return $smarty;
     }

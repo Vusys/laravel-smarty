@@ -86,4 +86,61 @@ return [
 
     'plugins_paths' => [],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tag Delimiters
+    |--------------------------------------------------------------------------
+    |
+    | Override Smarty's default `{` and `}` delimiters. Useful when templates
+    | live alongside JavaScript that uses the same braces, or when bridging
+    | from a legacy templating system that used non-standard markers.
+    | Set both to `null` (default) to leave Smarty's behaviour untouched.
+    |
+    */
+
+    'left_delimiter' => null,
+    'right_delimiter' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Compile Check
+    |--------------------------------------------------------------------------
+    |
+    | When `true`, Smarty checks the template source's mtime on every render
+    | and recompiles when stale. Disable in production for a small per-render
+    | win — at the cost of needing an explicit `smarty:clear-compiled` after
+    | a deploy.
+    |
+    */
+
+    'compile_check' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Modifiers
+    |--------------------------------------------------------------------------
+    |
+    | Modifiers applied automatically to every `{$var}` output. With
+    | `escape_html` already on by default this is rarely needed, but it's
+    | the right place to add things like `['strip']` or a custom
+    | `['my_normalize']` modifier across the whole template tree.
+    |
+    */
+
+    'default_modifiers' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Error Reporting
+    |--------------------------------------------------------------------------
+    |
+    | An `error_reporting()`-style bitmask Smarty applies while rendering.
+    | Defaults to `null` — leave PHP's current `error_reporting` level
+    | untouched. Set e.g. `E_ALL & ~E_NOTICE` to mask noisy notices in
+    | templates without changing the rest of the application's level.
+    |
+    */
+
+    'error_reporting' => null,
+
 ];
