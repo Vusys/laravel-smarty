@@ -1,5 +1,10 @@
 # laravel-smarty
 
+[![Tests](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml/badge.svg)](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml)
+[![PHP](https://img.shields.io/badge/php-%5E8.3-777BB4?logo=php&logoColor=white)](composer.json)
+[![Laravel](https://img.shields.io/badge/laravel-11%20%7C%2012%20%7C%2013-FF2D20?logo=laravel)](composer.json)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine
 in a Laravel application.
 
