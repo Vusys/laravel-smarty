@@ -58,7 +58,7 @@ jobs:
 
   static-analysis:
     runs-on: ubuntu-latest
-    name: Static analysis (Larastan)
+    name: Static analysis & code style
 
     steps:
       - uses: actions/checkout@v4
@@ -87,3 +87,6 @@ jobs:
 
       - name: Run Rector (dry-run)
         run: vendor/bin/rector process --dry-run --no-progress-bar
+
+      - name: Run Pint (test mode)
+        run: vendor/bin/pint --test

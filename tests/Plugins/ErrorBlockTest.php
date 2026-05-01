@@ -2,10 +2,10 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
-use Vusys\LaravelSmarty\Tests\TestCase;
-use Illuminate\Support\MessageBag;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
+use Vusys\LaravelSmarty\Tests\TestCase;
 
 class ErrorBlockTest extends TestCase
 {

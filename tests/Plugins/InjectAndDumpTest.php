@@ -2,8 +2,8 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
-use Vusys\LaravelSmarty\Tests\TestCase;
 use Symfony\Component\VarDumper\VarDumper;
+use Vusys\LaravelSmarty\Tests\TestCase;
 
 class InjectAndDumpTest extends TestCase
 {

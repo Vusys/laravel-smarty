@@ -2,8 +2,9 @@
 
 namespace Vusys\LaravelSmarty\Tests;
 
-use Vusys\LaravelSmarty\SmartyEngine;
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\View\Factory;
+use Vusys\LaravelSmarty\SmartyEngine;
 
 class SmartyEngineTest extends TestCase
 {
@@ -32,7 +33,7 @@ class SmartyEngineTest extends TestCase
 
     public function test_tpl_extension_is_registered_ahead_of_blade(): void
     {
-        /** @var \Illuminate\View\Factory $factory */
+        /** @var Factory $factory */
         $factory = $this->app->make(ViewFactoryContract::class);
         $extensions = $factory->getExtensions();
         $keys = array_keys($extensions);

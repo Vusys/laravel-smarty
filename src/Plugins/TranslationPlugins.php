@@ -15,6 +15,6 @@ class TranslationPlugins
             return (string) __($key, $params);
         });
 
-        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans', static fn(string $key, array $replace = []): string => (string) __($key, $replace));
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans', static fn (string $key, array $replace = []): string => (string) __($key, $replace));
     }
 }

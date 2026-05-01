@@ -10,7 +10,7 @@ class HelperPlugins
 {
     public static function register(Smarty $smarty): void
     {
-        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'json', static fn($value): string => (string) Js::from($value));
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'json', static fn ($value): string => (string) Js::from($value));
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'service', static function (array $params, Template $template): string {
             $template->assign($params['assign'] ?? '', resolve($params['name'] ?? ''));

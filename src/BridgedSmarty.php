@@ -24,10 +24,10 @@ class BridgedSmarty extends Smarty
     }
 
     /**
-     * @param  string|\Smarty\Template|null  $resource_name
+     * @param  string|Template|null  $resource_name
      * @param  mixed  $cache_id
      * @param  mixed  $compile_id
-     * @param  \Smarty\Smarty|\Smarty\Template|null  $parent
+     * @param  Smarty|Template|null  $parent
      * @param  int|null  $caching
      * @param  int|null  $cache_lifetime
      * @param  array<string, mixed>  $data

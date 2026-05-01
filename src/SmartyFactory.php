@@ -2,9 +2,9 @@
 
 namespace Vusys\LaravelSmarty;
 
-use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
 use Illuminate\Filesystem\Filesystem;
 use Smarty\Smarty;
+use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
 
 class SmartyFactory
 {
