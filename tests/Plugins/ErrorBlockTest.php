@@ -28,4 +28,11 @@ class ErrorBlockTest extends TestCase
 
         $this->assertSame("[start][end]\n", $output);
     }
+
+    public function test_error_block_does_not_evaluate_body_when_field_has_no_error(): void
+    {
+        $output = view('error_lazy')->render();
+
+        $this->assertSame("[start][end]\n", $output);
+    }
 }

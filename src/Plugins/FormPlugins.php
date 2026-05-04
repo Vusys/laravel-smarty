@@ -24,22 +24,22 @@ class FormPlugins
             $bag = $errors instanceof ViewErrorBag ? $errors->getBag('default') : null;
             $hasError = $bag !== null && $bag->has($field);
 
-            if ($repeat) {
-                if ($hasError) {
-                    $stack[] = $template->getTemplateVars('message');
-                    $template->assign('message', $bag->first($field));
+            if ($content === null) {
+                if (! $hasError) {
+                    $repeat = false;
+
+                    return '';
                 }
+
+                $stack[] = $template->getTemplateVars('message');
+                $template->assign('message', $bag->first($field));
 
                 return '';
             }
 
-            if ($hasError) {
-                $template->assign('message', array_pop($stack));
+            $template->assign('message', array_pop($stack));
 
-                return (string) $content;
-            }
-
-            return '';
+            return (string) $content;
         });
     }
 }
