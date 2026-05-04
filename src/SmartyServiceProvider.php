@@ -3,9 +3,11 @@
 namespace Vusys\LaravelSmarty;
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Foundation\Exceptions\Renderer\Mappers\BladeMapper;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Factory as ViewFactory;
+use Vusys\LaravelSmarty\Debug\SmartyExceptionMapper;
 
 class SmartyServiceProvider extends ServiceProvider
 {
@@ -20,6 +22,13 @@ class SmartyServiceProvider extends ServiceProvider
         // commands) get the same instance our boot() registered "smarty" on,
         // not a fresh empty resolver auto-built by the container.
         $this->app->alias('view.engine.resolver', EngineResolver::class);
+
+        // Laravel's exception Renderer constructs BladeMapper directly. Rebind
+        // it to our subclass so the same compiled-→-source frame rewriting
+        // Blade enjoys also applies to Smarty's .tpl.php compiled files.
+        if (class_exists(BladeMapper::class)) {
+            $this->app->bind(BladeMapper::class, SmartyExceptionMapper::class);
+        }
     }
 
     public function boot(): void
