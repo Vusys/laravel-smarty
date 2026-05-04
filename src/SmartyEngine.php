@@ -48,9 +48,16 @@ class SmartyEngine implements Engine
     }
 
     /**
-     * Walk the trace for the deepest frame inside a Smarty-compiled file
-     * and rewrite the exception to point at the .tpl source via markers
-     * the postfilter injected at compile time.
+     * Walk the throwable chain (root + previous links) for the deepest
+     * frame inside a Smarty-compiled file, then rewrite the exception to
+     * point at the .tpl source via markers the compiler injected.
+     *
+     * The chain walk matters because Smarty runtime helpers like
+     * CaptureRuntime catch a thrown user error in the body, run their own
+     * teardown, and re-throw a "Not matching {capture}{/capture}" wrapper
+     * whose own trace points at the runtime helper rather than the
+     * .tpl.php. Without walking previous() the wrapper's frames would be
+     * the only ones we see and we'd fall back to entryPath/line 1.
      */
     protected function remapException(Throwable $e, string $entryPath): Throwable
     {
@@ -68,36 +75,43 @@ class SmartyEngine implements Engine
             );
         }
 
-        $frames = array_merge(
-            [['file' => $e->getFile(), 'line' => $e->getLine()]],
-            $e->getTrace(),
-        );
-
-        foreach ($frames as $frame) {
-            $file = $frame['file'] ?? null;
-            $line = $frame['line'] ?? null;
-
-            if (! is_string($file) || ! is_int($line)) {
-                continue;
-            }
-
-            if (! str_ends_with($file, '.tpl.php')) {
-                continue;
-            }
-
-            $mapped = SourceMap::lookup($file, $line);
-            if ($mapped === null) {
-                continue;
-            }
-
-            return new ViewException(
-                $e->getMessage().' (View: '.$mapped['path'].')',
-                0,
-                1,
-                $mapped['path'],
-                $mapped['line'],
-                $e,
+        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+            $frames = array_merge(
+                [['file' => $current->getFile(), 'line' => $current->getLine()]],
+                $current->getTrace(),
             );
+
+            foreach ($frames as $frame) {
+                $file = $frame['file'] ?? null;
+                $line = $frame['line'] ?? null;
+
+                if (! is_string($file) || ! is_int($line)) {
+                    continue;
+                }
+
+                if (! str_ends_with($file, '.tpl.php')) {
+                    continue;
+                }
+
+                $mapped = SourceMap::lookup($file, $line);
+                if ($mapped === null) {
+                    continue;
+                }
+
+                // Wrap the exception that actually threw inside the
+                // compiled file (current), not necessarily the outer one
+                // ($e). When a runtime helper rethrows over the user's
+                // error, the inner exception's message is the useful one
+                // and BladeMapper's getPrevious() unwrap will land here.
+                return new ViewException(
+                    $current->getMessage().' (View: '.$mapped['path'].')',
+                    0,
+                    1,
+                    $mapped['path'],
+                    $mapped['line'],
+                    $current,
+                );
+            }
         }
 
         return new ViewException(

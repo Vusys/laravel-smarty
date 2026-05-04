@@ -95,6 +95,77 @@ class SourceMapTest extends TestCase
         $this->assertGreaterThan(1, $exception->getLine());
     }
 
+    public function test_compile_error_in_included_partial_points_at_partial(): void
+    {
+        // Compile error in an {include}d child should report the
+        // partial's path — not the wrapper's. CompilerException carries
+        // the source filename as Smarty parsed it from the lexer state,
+        // and our short-circuit in remapException preserves it.
+        $exception = $this->captureRender('errors.compile_error_in_include');
+
+        $this->assertInstanceOf(CompilerException::class, $exception->getPrevious());
+        $this->assertSame($this->fixturePath('errors/compile_error_partial.tpl'), $exception->getFile());
+    }
+
+    public function test_error_inside_inline_include_maps_to_child_partial(): void
+    {
+        // {include file="..." inline} merges the child's compiled bytes
+        // into the parent. Each child still gets its own __SLF header
+        // emitted by compileTemplate, so the child path attribution
+        // survives the inline merge.
+        $exception = $this->captureRender('errors.runtime_inline_include');
+
+        $this->assertSame($this->fixturePath('errors/included_broken.tpl'), $exception->getFile());
+        $this->assertSame(3, $exception->getLine());
+    }
+
+    public function test_error_inside_template_function_body_via_call(): void
+    {
+        // {function} body chunks are flushed into $blockOrFunctionCode
+        // and appended after the post-filtered main body. The body's
+        // __SLM markers travel with the chunks; the lookup walks back
+        // far enough to hit them even though they sit past the main
+        // template's tail.
+        $exception = $this->captureRender('errors.runtime_function_call', ['user' => null]);
+
+        $this->assertSame($this->fixturePath('errors/runtime_function_call.tpl'), $exception->getFile());
+        $this->assertSame(2, $exception->getLine());
+    }
+
+    public function test_error_inside_template_function_body_via_short_tag(): void
+    {
+        // Same as the {call} case but invoked via the short tag form
+        // ({render_user}) — that path goes through canCompileTemplateFunctionCall
+        // and a separate getTagCompiler('call') invocation in compileTag2.
+        $exception = $this->captureRender('errors.runtime_function_short', ['user' => null]);
+
+        $this->assertSame($this->fixturePath('errors/runtime_function_short.tpl'), $exception->getFile());
+        $this->assertSame(2, $exception->getLine());
+    }
+
+    public function test_error_inside_capture_body_unmasks_runtime_rethrow(): void
+    {
+        // CaptureRuntime::close() rethrows "Not matching {capture}{/capture}"
+        // when the user's body throw skips its bookkeeping, masking the
+        // real error. remapException walks the previous() chain so the
+        // inner Error's .tpl.php frame still wins, and the user sees the
+        // real "Call to a member function ... on null" message.
+        $exception = $this->captureRender('errors.runtime_capture', ['user' => null]);
+
+        $this->assertSame($this->fixturePath('errors/runtime_capture.tpl'), $exception->getFile());
+        $this->assertSame(3, $exception->getLine());
+        $this->assertStringContainsString('getAuthIdentifier', $exception->getMessage());
+        $this->assertStringNotContainsString('Not matching', $exception->getMessage());
+    }
+
+    public function test_error_inside_if_condition_maps_to_if_line(): void
+    {
+        $exception = $this->captureRender('errors.runtime_if_condition', ['user' => null]);
+
+        $this->assertSame($this->fixturePath('errors/runtime_if_condition.tpl'), $exception->getFile());
+        $this->assertSame(2, $exception->getLine());
+    }
+
     private function captureRender(string $view, array $data = []): ViewException
     {
         try {

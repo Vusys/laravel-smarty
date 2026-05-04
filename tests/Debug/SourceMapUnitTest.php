@@ -127,6 +127,25 @@ class SourceMapUnitTest extends TestCase
         );
     }
 
+    public function test_picks_rightmost_marker_when_line_packs_multiple(): void
+    {
+        // Smarty packs adjacent compiled tags onto one physical line of
+        // the .tpl.php. The rightmost marker on that line is the one
+        // immediately preceding the error within the same compiled
+        // line.
+        $path = $this->writeCompiledFile([
+            '<?php',
+            '/*__SLF:/abs/x/y.tpl*/',
+            '/*__SLM:5*/ A; /*__SLM:6*/ B; /*__SLM:7*/ C;',
+            'error happens here',
+        ]);
+
+        $this->assertSame(
+            ['path' => '/abs/x/y.tpl', 'line' => 7],
+            SourceMap::lookup($path, 4),
+        );
+    }
+
     public function test_uses_first_slf_header_when_multiple_present(): void
     {
         // Smarty's inheritance can produce a single compiled file

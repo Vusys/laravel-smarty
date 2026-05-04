@@ -44,8 +44,13 @@ class SourceMap
 
         $cap = min($errorLine, count($lines));
         for ($i = $cap - 1; $i >= 0; $i--) {
-            if (preg_match('#__SLM:(\d+)\*/#', $lines[$i], $m) === 1) {
-                return ['path' => $path, 'line' => (int) $m[1]];
+            if (preg_match_all('#__SLM:(\d+)\*/#', $lines[$i], $m) >= 1) {
+                // Multiple tags can compile onto one physical line of the
+                // .tpl.php (Smarty packs adjacent tags). The rightmost
+                // marker is the closest preceding tag for the error.
+                $captures = $m[1];
+
+                return ['path' => $path, 'line' => (int) end($captures)];
             }
         }
 
