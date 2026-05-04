@@ -5,6 +5,7 @@ namespace Vusys\LaravelSmarty;
 use Illuminate\Contracts\View\Engine;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\View\ViewException;
+use Smarty\CompilerException;
 use Smarty\Smarty;
 use Throwable;
 use Vusys\LaravelSmarty\Debug\SourceMap;
@@ -53,6 +54,20 @@ class SmartyEngine implements Engine
      */
     protected function remapException(Throwable $e, string $entryPath): Throwable
     {
+        // CompilerException already carries the source filename and line
+        // (Smarty parses them from the lexer state); just attach the View
+        // suffix and preserve the rest.
+        if ($e instanceof CompilerException) {
+            return new ViewException(
+                $e->getMessage().' (View: '.$e->getFile().')',
+                0,
+                1,
+                $e->getFile(),
+                $e->getLine(),
+                $e,
+            );
+        }
+
         $frames = array_merge(
             [['file' => $e->getFile(), 'line' => $e->getLine()]],
             $e->getTrace(),

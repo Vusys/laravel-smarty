@@ -43,7 +43,7 @@ class SourceMap
     public static function inject(string $compiled, string $source, string $sourcePath): string
     {
         $tokens = @token_get_all($compiled);
-        if ($tokens === false || $tokens === []) {
+        if ($tokens === []) {
             return $compiled;
         }
 
