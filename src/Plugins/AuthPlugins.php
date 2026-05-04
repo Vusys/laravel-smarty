@@ -10,39 +10,55 @@ class AuthPlugins
     public static function register(Smarty $smarty): void
     {
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'auth', static function ($params, $content, $template, &$repeat): string {
-            if ($repeat) {
+            if ($content === null) {
+                if (! auth()->guard($params['guard'] ?? null)->check()) {
+                    $repeat = false;
+                }
+
                 return '';
             }
 
-            return auth()->guard($params['guard'] ?? null)->check() ? (string) $content : '';
+            return (string) $content;
         });
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'guest', static function ($params, $content, $template, &$repeat): string {
-            if ($repeat) {
+            if ($content === null) {
+                if (! auth()->guard($params['guard'] ?? null)->guest()) {
+                    $repeat = false;
+                }
+
                 return '';
             }
 
-            return auth()->guard($params['guard'] ?? null)->guest() ? (string) $content : '';
+            return (string) $content;
         });
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'can', static function ($params, $content, $template, &$repeat): string {
-            if ($repeat) {
+            if ($content === null) {
+                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+
+                if (! Gate::check($params['ability'] ?? '', $arguments)) {
+                    $repeat = false;
+                }
+
                 return '';
             }
 
-            $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
-
-            return Gate::check($params['ability'] ?? '', $arguments) ? (string) $content : '';
+            return (string) $content;
         });
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'cannot', static function ($params, $content, $template, &$repeat): string {
-            if ($repeat) {
+            if ($content === null) {
+                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+
+                if (! Gate::denies($params['ability'] ?? '', $arguments)) {
+                    $repeat = false;
+                }
+
                 return '';
             }
 
-            $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
-
-            return Gate::denies($params['ability'] ?? '', $arguments) ? (string) $content : '';
+            return (string) $content;
         });
     }
 }
