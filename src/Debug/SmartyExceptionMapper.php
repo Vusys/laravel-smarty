@@ -17,8 +17,7 @@ use Symfony\Component\ErrorHandler\Exception\FlattenException;
  * subclass in the service provider.
  *
  * The mapping itself is delegated to SourceMap::lookup(), which reads
- * the __SLF / __SLM markers the SmartyFactory postfilter injects at
- * compile time.
+ * the __SLF / __SLM markers LineTrackingCompiler emits during compile.
  */
 class SmartyExceptionMapper extends BladeMapper
 {

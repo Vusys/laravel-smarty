@@ -35,6 +35,14 @@ class CompilerOverride
 
     private static bool $anchorVerified = false;
 
+    /**
+     * Test-only override for the path lookup. When non-null, install()
+     * uses this path instead of locating Smarty via the vendor walk.
+     * Lets tests point install() at a synthesised Source.php missing
+     * the anchor and verify the install-time guard fires.
+     */
+    private static ?string $sourcePathOverride = null;
+
     /** @var resource|null */
     public $context;
 
@@ -108,8 +116,21 @@ class CompilerOverride
         return self::$anchorVerified;
     }
 
+    /**
+     * Test seam: redirect install()'s anchor probe to a custom file.
+     * Pass null to clear. Production code never calls this.
+     */
+    public static function setSourcePathOverrideForTesting(?string $path): void
+    {
+        self::$sourcePathOverride = $path;
+    }
+
     private static function vendorSourcePath(): ?string
     {
+        if (self::$sourcePathOverride !== null) {
+            return self::$sourcePathOverride;
+        }
+
         // Walk up from this file to find /vendor/smarty/smarty/src/Template/Source.php.
         // Works regardless of whether the package is installed as a vendor
         // dependency or developed in-place.
