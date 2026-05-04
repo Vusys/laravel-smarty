@@ -4,8 +4,6 @@ namespace Vusys\LaravelSmarty;
 
 use Illuminate\Filesystem\Filesystem;
 use Smarty\Smarty;
-use Smarty\Template;
-use Vusys\LaravelSmarty\Debug\SourceMap;
 use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
 
 /**
@@ -109,18 +107,6 @@ class SmartyFactory
         }
 
         LaravelPlugins::register($smarty);
-
-        $smarty->registerFilter('post', static function (string $code, Template $template): string {
-            $source = $template->getSource();
-            $path = $source?->getFilepath();
-            $content = $source?->getContent() ?? '';
-
-            if (! is_string($path) || $path === '' || $content === '') {
-                return $code;
-            }
-
-            return SourceMap::inject($code, $content, $path);
-        }, 'laravel-smarty.source-map');
 
         foreach (self::$configurators as $configurator) {
             $configurator($smarty, $this->config);
