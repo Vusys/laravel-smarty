@@ -261,9 +261,7 @@ class CompilerOverride
     public function url_stat(string $path, int $flags)
     {
         /** @var array<int|string, int>|false $stat */
-        $stat = $this->withNativeFile(function () use ($path, $flags) {
-            return ($flags & STREAM_URL_STAT_QUIET) === STREAM_URL_STAT_QUIET ? @stat($path) : stat($path);
-        });
+        $stat = $this->withNativeFile(fn () => ($flags & STREAM_URL_STAT_QUIET) === STREAM_URL_STAT_QUIET ? @stat($path) : stat($path));
 
         return $stat;
     }
@@ -338,18 +336,18 @@ class CompilerOverride
                 case STREAM_META_TOUCH:
                     $args = array_values(array_filter(
                         is_array($value) ? $value : [],
-                        static fn ($v): bool => is_int($v),
+                        is_int(...),
                     ));
 
                     return @touch($path, ...$args);
                 case STREAM_META_OWNER:
                 case STREAM_META_OWNER_NAME:
-                    return is_int($value) || is_string($value) ? @chown($path, $value) : false;
+                    return (is_int($value) || is_string($value)) && @chown($path, $value);
                 case STREAM_META_GROUP:
                 case STREAM_META_GROUP_NAME:
-                    return is_int($value) || is_string($value) ? @chgrp($path, $value) : false;
+                    return (is_int($value) || is_string($value)) && @chgrp($path, $value);
                 case STREAM_META_ACCESS:
-                    return is_int($value) ? @chmod($path, $value) : false;
+                    return is_int($value) && @chmod($path, $value);
             }
 
             return false;

@@ -42,7 +42,7 @@ class LineTrackingCompiler extends SmartyTemplateCompiler
         // nested compileTag calls advance the lexer cursor. Smarty's
         // $parser property is private on the parent class so we have to
         // reach in via a bound closure rather than $this->parser.
-        $line = self::peekLineNumber($this);
+        $line = $this->peekLineNumber($this);
 
         $result = parent::compileTag($tag, $args, $parameter);
 
@@ -63,7 +63,7 @@ class LineTrackingCompiler extends SmartyTemplateCompiler
      */
     public function compilePrintExpression($value, $attributes = [], $modifiers = null): string
     {
-        $line = self::peekLineNumber($this);
+        $line = $this->peekLineNumber($this);
 
         $result = parent::compilePrintExpression($value, $attributes, $modifiers);
 
@@ -76,9 +76,9 @@ class LineTrackingCompiler extends SmartyTemplateCompiler
 
     private static ?Closure $linePeeker = null;
 
-    private static function peekLineNumber(SmartyTemplateCompiler $compiler): ?int
+    private function peekLineNumber(SmartyTemplateCompiler $compiler): ?int
     {
-        if (self::$linePeeker === null) {
+        if (! self::$linePeeker instanceof Closure) {
             self::$linePeeker = Closure::bind(
                 static function (SmartyTemplateCompiler $self): ?int {
                     // $parser is private on the parent — accessible only
