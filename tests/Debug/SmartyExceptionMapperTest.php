@@ -34,6 +34,13 @@ class SmartyExceptionMapperTest extends TestCase
     {
         parent::setUp();
 
+        // Laravel 10 does not ship the BladeMapper exception-page
+        // helper (introduced in Laravel 11), so neither the subclass
+        // nor the container binding exists there.
+        if (! class_exists(BladeMapper::class)) {
+            $this->markTestSkipped('BladeMapper requires Laravel 11+.');
+        }
+
         $this->tempDir = sys_get_temp_dir().'/laravel-smarty-mapper-tests';
         (new Filesystem)->ensureDirectoryExists($this->tempDir);
         $this->sourcePath = $this->tempDir.'/fake.tpl';
