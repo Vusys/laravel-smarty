@@ -60,5 +60,35 @@ class AuthPlugins
 
             return (string) $content;
         });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'canany', static function ($params, $content, $template, &$repeat): string {
+            if ($content === null) {
+                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+                $abilities = (array) ($params['abilities'] ?? []);
+
+                if (! Gate::any($abilities, $arguments)) {
+                    $repeat = false;
+                }
+
+                return '';
+            }
+
+            return (string) $content;
+        });
+
+        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'canall', static function ($params, $content, $template, &$repeat): string {
+            if ($content === null) {
+                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+                $abilities = (array) ($params['abilities'] ?? []);
+
+                if ($abilities === [] || ! Gate::check($abilities, $arguments)) {
+                    $repeat = false;
+                }
+
+                return '';
+            }
+
+            return (string) $content;
+        });
     }
 }
