@@ -196,12 +196,20 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
   (read-only)
 {/cannot}
 
+{canany abilities=['update', 'delete'] model=$post}
+  <a href="...">Manage</a>
+{/canany}
+
+{canall abilities=['publish', 'feature'] model=$post}
+  <button>Publish &amp; feature</button>
+{/canall}
+
 {auth guard="api"}
   API user.
 {/auth}
 ```
 
-`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument).
+`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
 
 ### Form helpers
 
