@@ -274,8 +274,21 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 
 ### Misc helpers
 
+```smarty
+<title>{config key="app.name" default="My App"}</title>
+
+{if session key="status"}
+  <div class="alert">{session key="status"}</div>
+{/if}
+
+<article>{$post->body|markdown nofilter}</article>
+```
+
 | Tag/modifier | Equivalent |
 |--------------|------------|
+| `{config key="app.name" default=...}` | `config('app.name', $default)` |
+| `{session key="status" default=...}` | `session('status', $default)` |
+| `\|markdown` modifier | `Illuminate\Support\Str::markdown($value)` — pair with `nofilter` to keep the rendered HTML, the same way you'd reach for Blade's `{!! !!}` |
 | `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
 | `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped |
