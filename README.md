@@ -260,6 +260,18 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 | `{vite entrypoints=[...] build_directory=...}` | Blade's `@vite([...], $buildDirectory)` — `build_directory` is optional |
 | `{vite_react_refresh}` | Blade's `@viteReactRefresh` |
 
+### Conditional attributes
+
+```smarty
+<button class="{class array=['btn' => true, 'btn-primary' => $isPrimary, 'btn-disabled' => !$isActive]}">
+<div style="{style array=['color: red' => $hasError, 'font-weight: bold' => $emphasised]}">
+```
+
+| Tag | Equivalent |
+|-----|------------|
+| `{class array=[...]}` | Blade's `@class([...])` — delegates to `Illuminate\Support\Arr::toCssClasses()`, the same helper Blade uses |
+| `{style array=[...]}` | Blade's `@style([...])` — delegates to `Illuminate\Support\Arr::toCssStyles()` |
+
 ### Misc helpers
 
 | Tag/modifier | Equivalent |
