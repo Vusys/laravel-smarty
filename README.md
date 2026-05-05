@@ -277,6 +277,27 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 | `{class array=[...]}` | Blade's `@class([...])` — delegates to `Illuminate\Support\Arr::toCssClasses()`, the same helper Blade uses |
 | `{style array=[...]}` | Blade's `@style([...])` — delegates to `Illuminate\Support\Arr::toCssStyles()` |
 
+### Number formatting
+
+Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte sizes, percentages, and abbreviated counts work as Smarty modifiers. On Laravel 10 these modifiers don't register; Smarty's native `number_format` continues to work.
+
+```smarty
+{$total|currency:'GBP'}            {* £1,234.56 *}
+{$bytes|file_size}                 {* 1.46 KB    *}
+{$bytes|file_size:1}               {* 1.5 KB     *}
+{$share|percentage:1}              {* 12.3%      *}
+{$views|abbreviate}                {* 1K         *}
+{$count|number_for_humans:1}       {* 1.5 thousand *}
+```
+
+| Modifier | Equivalent |
+|----------|------------|
+| `\|currency:$in:$locale:$precision` | `Number::currency($value, $in, $locale, $precision)` |
+| `\|file_size:$precision:$maxPrecision` | `Number::fileSize($bytes, $precision, $maxPrecision)` |
+| `\|percentage:$precision:$maxPrecision:$locale` | `Number::percentage($value, $precision, $maxPrecision, $locale)` |
+| `\|abbreviate:$precision:$maxPrecision` | `Number::abbreviate($value, $precision, $maxPrecision)` |
+| `\|number_for_humans:$precision:$maxPrecision:$abbreviate` | `Number::forHumans($value, $precision, $maxPrecision, $abbreviate)` |
+
 ### Misc helpers
 
 ```smarty
