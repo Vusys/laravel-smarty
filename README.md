@@ -154,8 +154,8 @@ class AppServiceProvider extends ServiceProvider
             // 3) Register custom plugins next to the built-in ones.
             $smarty->registerPlugin(
                 Smarty::PLUGIN_MODIFIER,
-                'currency',
-                fn ($amount, $symbol = '£') => $symbol.number_format((float) $amount, 2),
+                'since',
+                fn ($value) => $value === null ? '' : \Illuminate\Support\Carbon::parse($value)->diffForHumans(),
             );
 
             // 4) Swap the output cache resource for a custom one.
@@ -349,12 +349,14 @@ Bundled presets: `pagination::tailwind` (default), `pagination::simple-tailwind`
 Drop a file into a directory listed in `plugins_paths`:
 
 ```php
-// resources/smarty/plugins/modifier.currency.php
+// resources/smarty/plugins/modifier.since.php
 <?php
 
-function smarty_modifier_currency(int|float|null $amount, string $symbol = '£'): string
+use Illuminate\Support\Carbon;
+
+function smarty_modifier_since(mixed $value): string
 {
-    return $amount === null ? '' : $symbol.number_format((float) $amount, 2);
+    return $value === null ? '' : Carbon::parse($value)->diffForHumans();
 }
 ```
 
@@ -368,8 +370,8 @@ function smarty_modifier_currency(int|float|null $amount, string $symbol = '£')
 Use it in any template:
 
 ```smarty
-{$post.price|currency}      {* £4.50    *}
-{$post.price|currency:"$"}  {* $4.50    *}
+Posted {$post->created_at|since}            {* Posted 3 hours ago *}
+Updated {$post->updated_at|since|escape}    {* Updated 2 minutes ago *}
 ```
 
 The same convention applies to `function.<name>.php`, `block.<name>.php`, etc. — see the [Smarty plugin docs](https://www.smarty.net/docs/en/plugins.tpl).
