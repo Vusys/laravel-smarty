@@ -10,35 +10,9 @@
 
 Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine in a Laravel application.
 
-## Contents
-
-- [Why this exists](#why-this-exists)
-- [How it works](#how-it-works)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-  - [Template inheritance](#template-inheritance)
-- [Configuration](#configuration)
-  - [Customising Smarty further](#customising-smarty-further)
-- [Built-in plugins](#built-in-plugins)
-  - [Auth & authorisation blocks](#auth--authorisation-blocks)
-  - [Form helpers](#form-helpers)
-  - [URLs & assets](#urls--assets)
-  - [Translation](#translation)
-  - [Vite](#vite)
-  - [Misc helpers](#misc-helpers)
-- [Pagination](#pagination)
-- [Custom modifiers and plugins](#custom-modifiers-and-plugins)
-- [Artisan commands](#artisan-commands)
-- [Laravel integration](#laravel-integration)
-  - [View composers](#view-composers)
-  - [Debug tooling](#debug-tooling)
-  - [Template error source mapping](#template-error-source-mapping)
-- [Development](#development)
-  - [Static analysis & code style](#static-analysis--code-style)
-- [License](#license)
-
 ## Why this exists
+
+![Top Gear 'but I like this' meme captioned with Twig, Latte, and Smarty](img/likethis.jpg)
 
 Blade is the right answer for most Laravel apps, but a few situations push teams towards Smarty:
 
@@ -205,17 +179,33 @@ The package registers a curated set of Smarty plugins on every render that mirro
 Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short-circuit when the predicate is false, matching Blade's `@auth` / `@can` semantics — a `{$user->name}` inside `{auth}` won't blow up on a guest request.
 
 ```smarty
-{auth}              Welcome back, {$user->name|escape}.       {/auth}
-{guest}             Please <a href="{route name='login'}">sign in</a>. {/guest}
-{can ability="update" model=$post}    <a href="...">Edit</a>  {/can}
-{cannot ability="delete" model=$post} (read-only)             {/cannot}
-{auth guard="api"}  API user.                                 {/auth}
+{auth}
+  Welcome back, {auth()->user()->name|escape}.
+{/auth}
+
+{guest}
+  Please <a href="{route name='login'}">sign in</a>.
+{/guest}
+
+{can ability="update" model=$post}
+  <a href="...">Edit</a>
+{/can}
+
+{cannot ability="delete" model=$post}
+  (read-only)
+{/cannot}
+
+{auth guard="api"}
+  API user.
+{/auth}
 ```
+
+`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument).
 
 ### Form helpers
 
 ```smarty
-<form method="post" action="{route name='posts.store'}">
+<form method="post" action="{route name='posts.update' post=$post->id}">
   {csrf_field}
   {method_field method="PUT"}
 
@@ -226,6 +216,8 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
   {/error}
 </form>
 ```
+
+Inside `{error}` the validation message is bound as `$message` for the duration of the block, restored on exit.
 
 | Tag | Equivalent |
 |-----|------------|
@@ -238,21 +230,21 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 | Tag | Equivalent |
 |-----|------------|
-| `{route name="posts.show" parameters=['post' => $post]}` | `route('posts.show', ['post' => $post])` |
+| `{route name="posts.show" post=$post}` | `route('posts.show', ['post' => $post])` — every named param other than `name=` becomes a route parameter |
 | `{url path="/login"}` | `url('/login')` |
 | `{asset path="img/logo.svg"}` | `asset('img/logo.svg')` |
 
 ### Translation
 
 ```smarty
-<h1>{lang key="welcome" replace=['name' => $user->name]}</h1>
+<h1>{lang key="welcome" name=$user->name}</h1>
 <p>{"errors.required"|trans}</p>
 ```
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
-| `{lang key="..." replace=[...]}` | `__('...', [...])` |
-| `\|trans` modifier | `__($key)` |
+| `{lang key="..." foo=... bar=...}` | `__('...', ['foo' => ..., 'bar' => ...])` — every named param other than `key=` becomes a replacement |
+| `\|trans` modifier | `__($key, $replace = [])` |
 
 ### Vite
 
@@ -265,17 +257,17 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 | Tag | Equivalent |
 |-----|------------|
-| `{vite entrypoints=[...]}` | `Vite::__invoke([...])` |
-| `{vite_react_refresh}` | `Vite::reactRefresh()` |
+| `{vite entrypoints=[...] build_directory=...}` | Blade's `@vite([...], $buildDirectory)` — `build_directory` is optional |
+| `{vite_react_refresh}` | Blade's `@viteReactRefresh` |
 
 ### Misc helpers
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
 | `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
-| `{service class="App\\Services\\Foo"}` | Resolves a container binding (returns the instance for further `{$service->...}` use) |
-| `{dump var=$x}` | `dump($x)` — only renders when `APP_DEBUG=true` |
-| `{dd var=$x}` | `dd($x)` — only halts when `APP_DEBUG=true` |
+| `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
+| `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped |
+| `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts |
 
 ## Pagination
 
