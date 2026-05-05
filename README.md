@@ -239,12 +239,17 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 ```smarty
 <h1>{lang key="welcome" name=$user->name}</h1>
 <p>{"errors.required"|trans}</p>
+
+<p>{lang_choice key="messages.apples" count=$count}</p>
+<p>{"messages.apples"|trans_choice:$count}</p>
 ```
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
 | `{lang key="..." foo=... bar=...}` | `__('...', ['foo' => ..., 'bar' => ...])` — every named param other than `key=` becomes a replacement |
 | `\|trans` modifier | `__($key, $replace = [])` |
+| `{lang_choice key="..." count=$n foo=...}` | `trans_choice('...', $n, ['foo' => ...])` — every named param other than `key=` and `count=` becomes a replacement |
+| `\|trans_choice` modifier | `trans_choice($key, $count, $replace = [])` |
 
 ### Vite
 
