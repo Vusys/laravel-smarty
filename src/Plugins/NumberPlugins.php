@@ -21,7 +21,18 @@ class NumberPlugins
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,
             'currency',
-            static fn (int|float $value, string $in = '', ?string $locale = null, ?int $precision = null): string => (string) Number::currency($value, $in, $locale, $precision)
+            static function (int|float $value, ?string $in = null, ?string $locale = null, ?int $precision = null): string {
+                // Defer to Number's own default for $in across Laravel versions:
+                // L10 uses 'USD'; L11+ uses '' (which Number then resolves
+                // sensibly). Passing '' explicitly on L10 reaches
+                // NumberFormatter::formatCurrency($n, '') and yields the
+                // generic ¤ symbol, so don't pass $in unless the caller did.
+                if ($in === null) {
+                    return (string) Number::currency($value);
+                }
+
+                return (string) Number::currency($value, $in, $locale, $precision);
+            }
         );
 
         $smarty->registerPlugin(
