@@ -75,7 +75,7 @@ class SmartyEngine implements Engine
             );
         }
 
-        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+        for ($current = $e; $current instanceof Throwable; $current = $current->getPrevious()) {
             $frames = array_merge(
                 [['file' => $current->getFile(), 'line' => $current->getLine()]],
                 $current->getTrace(),
