@@ -16,5 +16,6 @@ class LaravelPlugins
         AuthPlugins::register($smarty);
         HelperPlugins::register($smarty);
         VitePlugins::register($smarty);
+        HtmlPlugins::register($smarty);
     }
 }
