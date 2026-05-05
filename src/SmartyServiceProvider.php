@@ -7,18 +7,15 @@ use Illuminate\Foundation\Exceptions\Renderer\Mappers\BladeMapper;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Factory as ViewFactory;
-use Vusys\LaravelSmarty\Debug\CompilerOverride;
 use Vusys\LaravelSmarty\Debug\SmartyExceptionMapper;
 
 class SmartyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Install the file:// stream wrapper that swaps Smarty's compiler
-        // for our LineTrackingCompiler before any Smarty class is loaded.
-        // Must run before Source.php is autoloaded — register() is the
-        // earliest hook Laravel offers.
-        CompilerOverride::install();
+        // Fail loud at boot if Smarty has refactored Template::$compiler out
+        // from under BridgedSmarty's reflection injection.
+        BridgedSmarty::ensureCompilerInjectionAvailable();
 
         $this->mergeConfigFrom(__DIR__.'/../config/smarty.php', 'smarty');
 

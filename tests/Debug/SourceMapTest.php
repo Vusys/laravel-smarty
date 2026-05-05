@@ -6,7 +6,6 @@ namespace Vusys\LaravelSmarty\Tests\Debug;
 
 use Illuminate\View\ViewException;
 use Smarty\CompilerException;
-use Vusys\LaravelSmarty\Debug\CompilerOverride;
 use Vusys\LaravelSmarty\Debug\LineTrackingCompiler;
 use Vusys\LaravelSmarty\SmartyFactory;
 use Vusys\LaravelSmarty\Tests\TestCase;
@@ -23,18 +22,16 @@ use Vusys\LaravelSmarty\Tests\TestCase;
  */
 class SourceMapTest extends TestCase
 {
-    public function test_compiler_override_is_installed_and_active(): void
+    public function test_compiler_injection_is_active_on_every_template(): void
     {
-        $this->assertTrue(CompilerOverride::isInstalled(), 'Stream wrapper should be registered.');
-        $this->assertTrue(CompilerOverride::isAnchorVerified(), 'Replacement anchor should match Smarty source.');
-
-        // Render any template and confirm the resolved compiler is our
-        // subclass — i.e. that the stream-wrapper rewrite of Source.php
-        // actually took effect.
+        // Every Template returned by doCreateTemplate must arrive with our
+        // LineTrackingCompiler already wired onto its private $compiler
+        // field, so getCompiler()'s lazy init never falls through to
+        // Source::createCompiler() (which is hard-coded to vanilla Smarty).
         $smarty = $this->app->make(SmartyFactory::class)->make([$this->viewsPath]);
         $template = $smarty->createTemplate('hello.tpl', null, null, $smarty);
-        $compiler = $template->getSource()->createCompiler();
-        $this->assertInstanceOf(LineTrackingCompiler::class, $compiler);
+
+        $this->assertInstanceOf(LineTrackingCompiler::class, $template->getCompiler());
     }
 
     public function test_error_at_top_level_maps_to_tpl_line(): void

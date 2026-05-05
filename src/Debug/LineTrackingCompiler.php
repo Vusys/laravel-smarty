@@ -22,11 +22,12 @@ use Smarty\Template;
  * /\*__SLF:/abs/path*\/ header. SourceMap::lookup() reads both at
  * error time and rewrites the stack frame back to the source.
  *
- * This compiler is installed by rewriting one line of Smarty's
- * Template/Source.php on autoload — see CompilerOverride. The
- * Smarty parent class declares `private $parser`, which is invisible
- * from a subclass; the bound closure in peekLineNumber() is how we
- * reach into it without forking the vendor file.
+ * This compiler is installed via reflection in BridgedSmarty's
+ * doCreateTemplate() hook, which pre-populates Template::$compiler
+ * before its lazy-init in getCompiler() can fire. The Smarty parent
+ * class declares `private $parser`, which is invisible from a subclass;
+ * the bound closure in peekLineNumber() is how we reach into it without
+ * forking the vendor file.
  */
 class LineTrackingCompiler extends SmartyTemplateCompiler
 {
