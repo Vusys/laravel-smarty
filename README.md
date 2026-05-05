@@ -3,12 +3,40 @@
 [![Tests](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml/badge.svg)](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml)
 [![PHP](https://img.shields.io/badge/php-%5E8.1-777BB4?logo=php&logoColor=white)](composer.json)
 [![Laravel](https://img.shields.io/badge/laravel-10%20%7C%2011%20%7C%2012%20%7C%2013-FF2D20?logo=laravel)](composer.json)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%206-brightgreen.svg)](phpstan.neon)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg)](phpstan.neon)
 [![Rector](https://img.shields.io/badge/Rector-passing-brightgreen.svg)](rector.php)
 [![Code Style: Pint](https://img.shields.io/badge/code%20style-Laravel%20Pint-FF2D20.svg?logo=laravel)](https://github.com/laravel/pint)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine in a Laravel application.
+
+## Contents
+
+- [Why this exists](#why-this-exists)
+- [How it works](#how-it-works)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+  - [Template inheritance](#template-inheritance)
+- [Configuration](#configuration)
+  - [Customising Smarty further](#customising-smarty-further)
+- [Built-in plugins](#built-in-plugins)
+  - [Auth & authorisation blocks](#auth--authorisation-blocks)
+  - [Form helpers](#form-helpers)
+  - [URLs & assets](#urls--assets)
+  - [Translation](#translation)
+  - [Vite](#vite)
+  - [Misc helpers](#misc-helpers)
+- [Pagination](#pagination)
+- [Custom modifiers and plugins](#custom-modifiers-and-plugins)
+- [Artisan commands](#artisan-commands)
+- [Laravel integration](#laravel-integration)
+  - [View composers](#view-composers)
+  - [Debug tooling](#debug-tooling)
+  - [Template error source mapping](#template-error-source-mapping)
+- [Development](#development)
+  - [Static analysis & code style](#static-analysis--code-style)
+- [License](#license)
 
 ## Why this exists
 
@@ -27,6 +55,7 @@ This package wires Smarty into Laravel's view machinery so you keep using `view(
 - A `SmartyEngine` implements `Illuminate\Contracts\View\Engine` and is registered on the `view.engine.resolver` for the `smarty` engine name.
 - A `SmartyFactory` builds a configured `Smarty` instance per resolver invocation, wired up with the configured compile/cache directories, caching settings, and plugin paths.
 - A `BridgedSmarty` subclass overrides `doCreateTemplate()` so that every sub-template loaded via `{extends}` or `{include}` fires Laravel's `creating:` and `composing:` events with a real `Illuminate\View\View` instance. This means **view composers and `barryvdh/laravel-debugbar`'s view collector see the full template tree** on every render — same surface Blade exposes, even when Smarty's compile cache is warm.
+- The same `doCreateTemplate()` hook injects a `LineTrackingCompiler` onto every Smarty `Template` via reflection, so runtime errors raised inside a `.tpl` body can be walked back to the originating tag — see [Template error source mapping](#template-error-source-mapping).
 
 ## Requirements
 
@@ -167,6 +196,141 @@ The callback fires once per Smarty instance, after the curated config and built-
 
 Why a service-provider hook and not a closure in `config/smarty.php`? Closures aren't serialisable, so they would silently break `php artisan config:cache`. A static `configure()` call from a service provider stays cache-safe.
 
+## Built-in plugins
+
+The package registers a curated set of Smarty plugins on every render that mirror Blade directives and Laravel helpers, so the common cases work out of the box.
+
+### Auth & authorisation blocks
+
+Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short-circuit when the predicate is false, matching Blade's `@auth` / `@can` semantics — a `{$user->name}` inside `{auth}` won't blow up on a guest request.
+
+```smarty
+{auth}              Welcome back, {$user->name|escape}.       {/auth}
+{guest}             Please <a href="{route name='login'}">sign in</a>. {/guest}
+{can ability="update" model=$post}    <a href="...">Edit</a>  {/can}
+{cannot ability="delete" model=$post} (read-only)             {/cannot}
+{auth guard="api"}  API user.                                 {/auth}
+```
+
+### Form helpers
+
+```smarty
+<form method="post" action="{route name='posts.store'}">
+  {csrf_field}
+  {method_field method="PUT"}
+
+  <input name="title" value="{old field='title' default=$post->title|default:''}">
+
+  {error field="title"}
+    <p class="error">{$message|escape}</p>
+  {/error}
+</form>
+```
+
+| Tag | Equivalent |
+|-----|------------|
+| `{csrf_field}` | `csrf_field()` |
+| `{method_field method="PUT"}` | `method_field('PUT')` |
+| `{old field="title" default=...}` | `old('title', $default)` |
+| `{error field="..."}...{/error}` | `@error('...')` — body renders only when there is a validation error; `$message` is bound inside |
+
+### URLs & assets
+
+| Tag | Equivalent |
+|-----|------------|
+| `{route name="posts.show" parameters=['post' => $post]}` | `route('posts.show', ['post' => $post])` |
+| `{url path="/login"}` | `url('/login')` |
+| `{asset path="img/logo.svg"}` | `asset('img/logo.svg')` |
+
+### Translation
+
+```smarty
+<h1>{lang key="welcome" replace=['name' => $user->name]}</h1>
+<p>{"errors.required"|trans}</p>
+```
+
+| Tag/modifier | Equivalent |
+|--------------|------------|
+| `{lang key="..." replace=[...]}` | `__('...', [...])` |
+| `\|trans` modifier | `__($key)` |
+
+### Vite
+
+```smarty
+<head>
+  {vite_react_refresh}
+  {vite entrypoints=['resources/js/app.js']}
+</head>
+```
+
+| Tag | Equivalent |
+|-----|------------|
+| `{vite entrypoints=[...]}` | `Vite::__invoke([...])` |
+| `{vite_react_refresh}` | `Vite::reactRefresh()` |
+
+### Misc helpers
+
+| Tag/modifier | Equivalent |
+|--------------|------------|
+| `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
+| `{service class="App\\Services\\Foo"}` | Resolves a container binding (returns the instance for further `{$service->...}` use) |
+| `{dump var=$x}` | `dump($x)` — only renders when `APP_DEBUG=true` |
+| `{dd var=$x}` | `dd($x)` — only halts when `APP_DEBUG=true` |
+
+## Pagination
+
+Laravel's paginator integrates without extra wiring. The package ships Smarty ports of every `pagination::*` template Laravel includes:
+
+```php
+public function index(Request $request)
+{
+    return view('posts', [
+        'posts' => Post::query()->paginate(15),
+    ]);
+}
+```
+
+```smarty
+{foreach $posts as $post}
+  <article>{$post->title|escape}</article>
+{/foreach}
+
+{$posts->links()}                            {* default tailwind *}
+{$posts->links('pagination::bootstrap-5')}   {* pick another preset *}
+```
+
+Bundled presets: `pagination::tailwind` (default), `pagination::simple-tailwind`, `pagination::bootstrap-5`, `pagination::simple-bootstrap-5`, `pagination::bootstrap-4`, `pagination::simple-bootstrap-4`, `pagination::bootstrap-3`, `pagination::simple-bootstrap-3`, `pagination::semantic-ui`.
+
+## Custom modifiers and plugins
+
+Drop a file into a directory listed in `plugins_paths`:
+
+```php
+// resources/smarty/plugins/modifier.currency.php
+<?php
+
+function smarty_modifier_currency(int|float|null $amount, string $symbol = '£'): string
+{
+    return $amount === null ? '' : $symbol.number_format((float) $amount, 2);
+}
+```
+
+```php
+// config/smarty.php
+'plugins_paths' => [
+    resource_path('smarty/plugins'),
+],
+```
+
+Use it in any template:
+
+```smarty
+{$post.price|currency}      {* £4.50    *}
+{$post.price|currency:"$"}  {* $4.50    *}
+```
+
+The same convention applies to `function.<name>.php`, `block.<name>.php`, etc. — see the [Smarty plugin docs](https://www.smarty.net/docs/en/plugins.tpl).
+
 ## Artisan commands
 
 Three commands ship for managing Smarty's compile and cache directories. They share the same Smarty instance the runtime uses, so configuration, plugins, and paths all match what `view()` sees.
@@ -217,36 +381,6 @@ php artisan smarty:clear-cache --file=welcome.tpl --cache-id=user.42
 | `--compile-id` | Restrict to a `compile_id`. |
 | `--expire`     | Only clear entries older than N seconds. |
 
-## Custom modifiers and plugins
-
-Drop a file into a directory listed in `plugins_paths`:
-
-```php
-// resources/smarty/plugins/modifier.currency.php
-<?php
-
-function smarty_modifier_currency(int|float|null $amount, string $symbol = '£'): string
-{
-    return $amount === null ? '' : $symbol.number_format((float) $amount, 2);
-}
-```
-
-```php
-// config/smarty.php
-'plugins_paths' => [
-    resource_path('smarty/plugins'),
-],
-```
-
-Use it in any template:
-
-```smarty
-{$post.price|currency}      {* £4.50    *}
-{$post.price|currency:"$"}  {* $4.50    *}
-```
-
-The same convention applies to `function.<name>.php`, `block.<name>.php`, etc. — see the [Smarty plugin docs](https://www.smarty.net/docs/en/plugins.tpl).
-
 ## Laravel integration
 
 ### View composers
@@ -265,6 +399,17 @@ Caveat: data added by a composer to a sub-template's `View` instance is **not** 
 
 `creating:` and `composing:` view events fire for every template Smarty loads — entries, `{extends}` parents, and `{include}` partials — so anything in the Laravel ecosystem that listens to those events sees the full render tree. Debugbar's **Views** tab, Telescope's **Views** watcher, and any other tool that hooks Laravel's view events should work without extra wiring, the same way they do for Blade.
 
+### Template error source mapping
+
+A runtime error inside a `.tpl` body — say `{$user->getAuthIdentifier()}` when `$user` is null — would naturally land on Smarty's compiled `<hash>_<file>.tpl.php` file under `storage/framework/smarty/compile/`, with no obvious link back to the template you actually wrote. This package rewrites that automatically.
+
+- A custom compiler (`Debug\LineTrackingCompiler`) emits `/*__SLM:N*/` and `/*__SLF:/abs/path*/` markers into the compiled output during compilation. Installed via reflection at `Template` instantiation time, no vendor patching.
+- `Debug\SourceMap` walks back from the compiled-file frame to the closest preceding marker.
+- On Laravel 11+, `Debug\SmartyExceptionMapper` extends the framework's `BladeMapper` and is bound in its place, so the exception page rewrites every `.tpl.php` trace frame to the `.tpl` source — same treatment Blade enjoys for `.blade.php`.
+- `SmartyEngine::remapException()` walks the full `getPrevious()` chain so errors raised inside a `{capture}` body still surface the user's real exception, not Smarty's `Not matching {capture}{/capture}` rethrow wrapper.
+
+The mapping covers `{block}` bodies of `{extends}` children, `{include}`d partials (including `inline`), `{function}` bodies (both `{call}` and short-tag invocations), `{capture}` bodies, `{if}` condition expressions, and `Smarty\CompilerException`s raised at compile time. Laravel 10 has no `BladeMapper` to extend, so the trace-frame rewrite no-ops there — error messages still carry a `(View: /path/to/source.tpl)` suffix and `CompilerException` source paths/lines are preserved.
+
 ## Development
 
 The package is developed with Orchestra Testbench.
@@ -274,7 +419,7 @@ composer install
 vendor/bin/phpunit
 ```
 
-Tests cover engine rendering, the Smarty-before-Blade extension priority, the resolver wiring, and `composing:`/`creating:` event firing for parents and includes.
+Tests cover engine rendering, the Smarty-before-Blade extension priority, the resolver wiring, `composing:`/`creating:` event firing for parents and includes, the built-in plugins, paginator integration, and end-to-end `.tpl` source-line attribution for runtime and compile errors.
 
 ### Static analysis & code style
 
@@ -282,7 +427,7 @@ Three tools run on every pull request via the `Static analysis & code style` CI 
 
 | Command                  | Tool                                              | Purpose                                                                    |
 |--------------------------|---------------------------------------------------|----------------------------------------------------------------------------|
-| `composer analyse`       | [Larastan](https://github.com/larastan/larastan)  | PHPStan + Laravel rules, currently at level 6 (see `phpstan.neon`).        |
+| `composer analyse`       | [Larastan](https://github.com/larastan/larastan)  | PHPStan + Laravel rules, currently at level 9 (see `phpstan.neon`).        |
 | `composer rector:check`  | [Rector](https://github.com/rectorphp/rector) + [rector-laravel](https://github.com/driftingly/rector-laravel) | Dry-run automated refactors using version-agnostic quality sets only — Laravel level sets are intentionally excluded so we don't rewrite code into a Laravel-13-only shape and break older support. |
 | `composer pint:check`    | [Laravel Pint](https://github.com/laravel/pint)   | Default Laravel preset, no `pint.json` overrides.                          |
 
