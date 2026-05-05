@@ -1,0 +1,9 @@
+currency_default={1234.56|currency}
+currency_gbp={1234.56|currency:'GBP'}
+file_size_kb={1536|file_size}
+file_size_mb={4500000|file_size:1}
+percentage={12|percentage}
+percentage_precise={12.345|percentage:1}
+abbreviate={1500|abbreviate}
+abbreviate_precise={1500000|abbreviate:1}
+for_humans={1500|number_for_humans}
