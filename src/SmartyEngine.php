@@ -31,12 +31,17 @@ class SmartyEngine implements Engine
 
         $template = $this->smarty->createTemplate($this->files->basename($path), null, null, $this->smarty);
 
-        if (! array_key_exists('session', $data) && app()->bound('session')) {
-            $data['session'] = session()->all();
-        }
+        $autoShareSession = ! array_key_exists('session', $data) && app()->bound('session');
 
         foreach ($data as $key => $value) {
             $template->assign($key, $value);
+        }
+
+        // Auto-shared $session is request-state, so mark it nocache: when
+        // smarty.caching is on, uses of {$session.status} compile into a
+        // {nocache} region instead of being baked into the cached output.
+        if ($autoShareSession) {
+            $template->assign('session', session()->all(), true);
         }
 
         try {

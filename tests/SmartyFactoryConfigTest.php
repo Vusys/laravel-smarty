@@ -2,6 +2,7 @@
 
 namespace Vusys\LaravelSmarty\Tests;
 
+use Illuminate\Filesystem\Filesystem;
 use Smarty\Smarty;
 use Vusys\LaravelSmarty\SmartyFactory;
 
@@ -65,5 +66,29 @@ class SmartyFactoryConfigTest extends TestCase
         $this->assertIsArray($captured);
         $this->assertArrayHasKey('compile_path', $captured);
         $this->assertArrayHasKey('cache_path', $captured);
+    }
+
+    public function test_custom_modifier_loads_from_plugins_paths(): void
+    {
+        $files = new Filesystem;
+        $dir = sys_get_temp_dir().'/laravel-smarty-tests/plugins-'.bin2hex(random_bytes(4));
+        $files->ensureDirectoryExists($dir);
+        $files->put(
+            $dir.'/modifier.shout.php',
+            '<?php function smarty_modifier_shout(string $v): string { return strtoupper($v).\'!\'; }',
+        );
+
+        $this->app['config']->set('smarty.plugins_paths', [$dir]);
+
+        $files->put($this->viewsPath.'/probe_shout.tpl', '{$name|shout}');
+
+        try {
+            $output = view('probe_shout', ['name' => 'hi'])->render();
+
+            $this->assertStringContainsString('HI!', $output);
+        } finally {
+            $files->delete($this->viewsPath.'/probe_shout.tpl');
+            $files->deleteDirectory($dir);
+        }
     }
 }

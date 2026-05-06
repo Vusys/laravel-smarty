@@ -35,4 +35,19 @@ class ErrorBlockTest extends TestCase
 
         $this->assertSame("[start][end]\n", $output);
     }
+
+    public function test_error_block_restores_outer_message_on_exit(): void
+    {
+        Session::start();
+        $errors = (new ViewErrorBag)->put('default', new MessageBag([
+            'email' => ['inner-message'],
+        ]));
+        Session::put('errors', $errors);
+
+        $output = view('error_restore', ['message' => 'outer-message'])->render();
+
+        $this->assertStringContainsString('before=outer-message', $output);
+        $this->assertStringContainsString('inner=inner-message', $output);
+        $this->assertStringContainsString('after=outer-message', $output);
+    }
 }

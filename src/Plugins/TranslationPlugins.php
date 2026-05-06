@@ -13,7 +13,7 @@ class TranslationPlugins
             unset($params['key']);
 
             return (string) __($key, $params);
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans', static fn (string $key, array $replace = []): string => (string) __($key, $replace));
 
@@ -23,7 +23,7 @@ class TranslationPlugins
             unset($params['key'], $params['count']);
 
             return trans_choice($key, $count, $params);
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'trans_choice', static fn (string $key, int $count, array $replace = []): string => trans_choice($key, $count, $replace));
     }
