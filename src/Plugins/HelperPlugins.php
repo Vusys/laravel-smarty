@@ -17,7 +17,17 @@ class HelperPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'config', static fn (array $params) => config($params['key'] ?? '', $params['default'] ?? null));
 
-        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'session', static fn (array $params) => session($params['key'] ?? null, $params['default'] ?? null));
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'session', static function (array $params, Template $template) {
+            $value = session($params['key'] ?? null, $params['default'] ?? null);
+
+            if (isset($params['assign'])) {
+                $template->assign($params['assign'], $value);
+
+                return '';
+            }
+
+            return $value;
+        });
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'service', static function (array $params, Template $template): string {
             $template->assign($params['assign'] ?? '', resolve($params['name'] ?? ''));

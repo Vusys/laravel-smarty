@@ -312,17 +312,26 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 ```smarty
 <title>{config key="app.name" default="My App"}</title>
 
-{if session key="status"}
-  <div class="alert">{session key="status"}</div>
+{if $session.status}
+  <div class="alert">{$session.status}</div>
 {/if}
 
 <article>{$post->body|markdown nofilter}</article>
+```
+
+The `$session` array is shared into every Smarty view automatically (it's `session()->all()` snapshotted at render time), so flash messages and other keys are available inside `{if ...}` without an extra step. If you'd rather pull a single value via the tag — handy when you want a default — assign it first:
+
+```smarty
+{session key="status" assign="status"}
+{if $status}<div class="alert">{$status}</div>{/if}
 ```
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
 | `{config key="app.name" default=...}` | `config('app.name', $default)` |
 | `{session key="status" default=...}` | `session('status', $default)` |
+| `{session key="status" assign="status"}` | `$status = session('status')` (assigns instead of printing) |
+| `$session.status` (auto-shared) | `session('status')` |
 | `\|markdown` modifier | `Illuminate\Support\Str::markdown($value)` — pair with `nofilter` to keep the rendered HTML, the same way you'd reach for Blade's `{!! !!}` |
 | `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
