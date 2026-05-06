@@ -7,11 +7,7 @@
         {/if}
 
         {foreach $elements as $element}
-            {if is_string($element)}
-                <a class="icon item disabled" aria-disabled="true">{$element}</a>
-            {/if}
-
-            {if is_array($element)}
+            {if $element|is_array}
                 {foreach $element as $page => $url}
                     {if $page == $paginator->currentPage()}
                         <a class="item active" href="{$url}" aria-current="page">{$page}</a>
@@ -19,6 +15,8 @@
                         <a class="item" href="{$url}">{$page}</a>
                     {/if}
                 {/foreach}
+            {else}
+                <a class="icon item disabled" aria-disabled="true">{$element}</a>
             {/if}
         {/foreach}
 

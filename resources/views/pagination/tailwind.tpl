@@ -65,15 +65,8 @@
 
                     {* Pagination Elements *}
                     {foreach $elements as $element}
-                        {* "Three Dots" Separator *}
-                        {if is_string($element)}
-                            <span aria-disabled="true">
-                                <span class="inline-flex items-center px-4 py-2 -ml-px text-sm font-medium text-gray-700 bg-white border border-gray-300 cursor-default leading-5 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300">{$element}</span>
-                            </span>
-                        {/if}
-
-                        {* Array Of Links *}
-                        {if is_array($element)}
+                        {if $element|is_array}
+                            {* Array Of Links *}
                             {foreach $element as $page => $url}
                                 {if $page == $paginator->currentPage()}
                                     <span aria-current="page">
@@ -85,6 +78,11 @@
                                     </a>
                                 {/if}
                             {/foreach}
+                        {else}
+                            {* "Three Dots" Separator *}
+                            <span aria-disabled="true">
+                                <span class="inline-flex items-center px-4 py-2 -ml-px text-sm font-medium text-gray-700 bg-white border border-gray-300 cursor-default leading-5 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300">{$element}</span>
+                            </span>
                         {/if}
                     {/foreach}
 
