@@ -2,6 +2,7 @@
 
 namespace Vusys\LaravelSmarty\Tests;
 
+use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -64,6 +65,23 @@ class PaginationTest extends TestCase
         $this->assertStringContainsString('http://localhost/posts?page=2', $output);
     }
 
+    /**
+     * Pin that every bundled preset resolves to the package's own .tpl file —
+     * not Laravel's framework Blade pagination view. Without prependNamespace
+     * in the service provider, the framework's `pagination::*` Blade variants
+     * win the view-finder lookup and our Smarty templates go unused.
+     */
+    #[DataProvider('allPresets')]
+    public function test_preset_resolves_to_package_tpl(string $preset): void
+    {
+        $factory = $this->app->make(ViewFactoryContract::class);
+        $path = $factory->getFinder()->find($preset);
+
+        $this->assertStringEndsWith('.tpl', $path, "{$preset} should resolve to a .tpl file, got {$path}");
+        $this->assertStringContainsString('/resources/views/pagination/', $path);
+        $this->assertStringNotContainsString('/laravel/framework/', $path, "{$preset} resolved to a framework Blade view instead of the package's .tpl");
+    }
+
     public static function lengthAwarePresets(): array
     {
         return [
@@ -83,6 +101,11 @@ class PaginationTest extends TestCase
             ['pagination::simple-bootstrap-4'],
             ['pagination::simple-bootstrap-3'],
         ];
+    }
+
+    public static function allPresets(): array
+    {
+        return array_merge(self::lengthAwarePresets(), self::simplePresets());
     }
 
     protected function makePaginator(int $currentPage, int $perPage, int $total): LengthAwarePaginator

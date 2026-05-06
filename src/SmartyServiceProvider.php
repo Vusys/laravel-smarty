@@ -41,7 +41,7 @@ class SmartyServiceProvider extends ServiceProvider
             __DIR__.'/../config/smarty.php' => $this->app->configPath('smarty.php'),
         ], 'smarty-config');
 
-        $this->loadViewsFrom(__DIR__.'/../resources/views/pagination', 'pagination');
+        $this->registerPaginationViews();
 
         $this->registerEngine();
 
@@ -52,6 +52,38 @@ class SmartyServiceProvider extends ServiceProvider
                 Console\OptimizeCommand::class,
             ]);
         }
+    }
+
+    /**
+     * Register the package's Smarty pagination templates so they win over
+     * Laravel's framework Blade pagination views for the same `pagination::*`
+     * names. `loadViewsFrom` appends, which would leave Laravel's Blade
+     * variants resolving first; we prepend instead so a `.tpl` lookup hits
+     * our directory before the framework one. User-published vendor
+     * overrides (`resources/views/vendor/pagination`) are prepended last so
+     * they sit ahead of both.
+     */
+    protected function registerPaginationViews(): void
+    {
+        $packagePath = __DIR__.'/../resources/views/pagination';
+
+        $this->callAfterResolving('view', function (ViewFactory $view) use ($packagePath): void {
+            $view->prependNamespace('pagination', $packagePath);
+
+            $viewPathsRaw = $this->app->make('config')->get('view.paths', []);
+            $viewPaths = is_array($viewPathsRaw) ? array_filter($viewPathsRaw, is_string(...)) : [];
+
+            foreach ($viewPaths as $base) {
+                $vendorPath = $base.'/vendor/pagination';
+                if (is_dir($vendorPath)) {
+                    $view->prependNamespace('pagination', $vendorPath);
+                }
+            }
+        });
+
+        $this->publishes([
+            $packagePath => $this->app->resourcePath('views/vendor/pagination'),
+        ], 'smarty-pagination-views');
     }
 
     protected function registerEngine(): void
