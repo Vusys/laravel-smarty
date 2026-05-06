@@ -44,6 +44,35 @@ class AuthBlocksTest extends TestCase
         $this->assertStringNotContainsString('G=', $output);
     }
 
+    public function test_auth_block_binds_authenticated_user_as_dollar_user(): void
+    {
+        $this->actingAs($this->namedUser('Ada'));
+
+        $output = view('auth_user')->render();
+
+        $this->assertStringContainsString('inside=Ada', $output);
+    }
+
+    public function test_auth_block_restores_outer_user_after_exit(): void
+    {
+        $this->actingAs($this->namedUser('Ada'));
+
+        $output = view('auth_user', ['user' => 'outer'])->render();
+
+        $this->assertStringContainsString('before=outer', $output);
+        $this->assertStringContainsString('inside=Ada', $output);
+        $this->assertStringContainsString('after=outer', $output);
+    }
+
+    public function test_auth_block_does_not_assign_user_when_guest(): void
+    {
+        $output = view('auth_user', ['user' => 'outer'])->render();
+
+        $this->assertStringContainsString('before=outer', $output);
+        $this->assertStringNotContainsString('inside=', $output);
+        $this->assertStringContainsString('after=outer', $output);
+    }
+
     public function test_can_block_does_not_evaluate_body_when_denied(): void
     {
         $output = view('can_lazy')->render();
@@ -98,6 +127,22 @@ class AuthBlocksTest extends TestCase
             {
                 return '';
             }
+        };
+    }
+
+    protected function namedUser(string $name): Authenticatable
+    {
+        return new class($name) implements Authenticatable
+        {
+            public function __construct(public string $name) {}
+
+            public function getAuthIdentifierName(): string { return 'id'; }
+            public function getAuthIdentifier(): int { return 1; }
+            public function getAuthPasswordName(): string { return 'password'; }
+            public function getAuthPassword(): string { return ''; }
+            public function getRememberToken(): string { return ''; }
+            public function setRememberToken($value): void {}
+            public function getRememberTokenName(): string { return ''; }
         };
     }
 }

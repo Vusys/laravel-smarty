@@ -181,7 +181,7 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 ```smarty
 {auth}
-  Welcome back, {auth()->user()->name|escape}.
+  Welcome back, {$user->name|escape}.
 {/auth}
 
 {guest}
@@ -209,7 +209,7 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 {/auth}
 ```
 
-`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
+`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. Inside `{auth}` the authenticated user is bound as `$user` for the duration of the block (any outer `$user` is restored on exit), so you can write `{$user->name|escape}` without passing the user via view data. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
 
 ### Form helpers
 
