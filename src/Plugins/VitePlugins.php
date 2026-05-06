@@ -16,12 +16,13 @@ class VitePlugins
             $buildDirectory = $params['build_directory'] ?? null;
 
             return (string) resolve(Vite::class)($entrypoints, $buildDirectory);
-        });
+        }, false);
 
         $smarty->registerPlugin(
             Smarty::PLUGIN_FUNCTION,
             'vite_react_refresh',
             static fn (): string => (string) resolve(Vite::class)->reactRefresh(),
+            false,
         );
     }
 }

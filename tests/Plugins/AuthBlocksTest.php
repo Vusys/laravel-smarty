@@ -3,6 +3,7 @@
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
@@ -71,6 +72,49 @@ class AuthBlocksTest extends TestCase
         $this->assertStringContainsString('before=outer', $output);
         $this->assertStringNotContainsString('inside=', $output);
         $this->assertStringContainsString('after=outer', $output);
+    }
+
+    public function test_auth_block_assigns_user_when_no_outer_user(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $output = view('auth_no_outer')->render();
+
+        $this->assertStringContainsString('before=(none)', $output);
+        $this->assertStringContainsString('inside=1', $output);
+        // Outer $user was undefined; close restores to null, which the
+        // |default modifier renders as '(none)'.
+        $this->assertStringContainsString('after=(none)', $output);
+    }
+
+    public function test_auth_block_uses_named_guard(): void
+    {
+        $this->app['config']->set('auth.guards.api', ['driver' => 'session', 'provider' => 'users']);
+        $this->app['config']->set('auth.providers.users', ['driver' => 'eloquent', 'model' => \stdClass::class]);
+
+        // Set the user only on the api guard. actingAs($u, 'api') would
+        // also call shouldUse('api') and shift the default guard, masking
+        // the test we want to run here.
+        Auth::guard('api')->setUser($this->stubUser());
+
+        $output = view('auth_guard')->render();
+
+        $this->assertStringContainsString('HIT-API user=1', $output);
+    }
+
+    public function test_guest_block_uses_named_guard(): void
+    {
+        $this->app['config']->set('auth.guards.api', ['driver' => 'session', 'provider' => 'users']);
+        $this->app['config']->set('auth.providers.users', ['driver' => 'eloquent', 'model' => \stdClass::class]);
+
+        // No user on the api guard — guest body should fire.
+        $output = view('guest_guard')->render();
+        $this->assertStringContainsString('HIT-GUEST', $output);
+
+        // Now sign the user in on the api guard; guest body must not fire.
+        Auth::guard('api')->setUser($this->stubUser());
+        $authedOutput = view('guest_guard')->render();
+        $this->assertStringNotContainsString('HIT-GUEST', $authedOutput);
     }
 
     public function test_can_block_does_not_evaluate_body_when_denied(): void

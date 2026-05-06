@@ -27,13 +27,13 @@ class HelperPlugins
             }
 
             return $value;
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'service', static function (array $params, Template $template): string {
             $template->assign($params['assign'] ?? '', resolve($params['name'] ?? ''));
 
             return '';
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'dump', static function (array $params): string {
             foreach ($params as $value) {
@@ -41,10 +41,10 @@ class HelperPlugins
             }
 
             return '';
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'dd', static function (array $params): string {
             dd(...array_values($params));
-        });
+        }, false);
     }
 }

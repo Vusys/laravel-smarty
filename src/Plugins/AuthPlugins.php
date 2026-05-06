@@ -33,7 +33,7 @@ class AuthPlugins
             }
 
             return (string) $content;
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'guest', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
@@ -45,7 +45,7 @@ class AuthPlugins
             }
 
             return (string) $content;
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'can', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
@@ -59,7 +59,7 @@ class AuthPlugins
             }
 
             return (string) $content;
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'cannot', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
@@ -73,7 +73,7 @@ class AuthPlugins
             }
 
             return (string) $content;
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'canany', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
@@ -88,7 +88,7 @@ class AuthPlugins
             }
 
             return (string) $content;
-        });
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'canall', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
@@ -103,6 +103,6 @@ class AuthPlugins
             }
 
             return (string) $content;
-        });
+        }, false);
     }
 }
