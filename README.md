@@ -181,7 +181,7 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 ```smarty
 {auth}
-  Welcome back, {auth()->user()->name|escape}.
+  Welcome back, {$user->name|escape}.
 {/auth}
 
 {guest}
@@ -209,7 +209,7 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 {/auth}
 ```
 
-`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
+`{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. Inside `{auth}` the authenticated user is bound as `$user` for the duration of the block (any outer `$user` is restored on exit), so you can write `{$user->name|escape}` without passing the user via view data. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
 
 ### Form helpers
 
@@ -312,17 +312,26 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 ```smarty
 <title>{config key="app.name" default="My App"}</title>
 
-{if session key="status"}
-  <div class="alert">{session key="status"}</div>
+{if $session.status}
+  <div class="alert">{$session.status}</div>
 {/if}
 
 <article>{$post->body|markdown nofilter}</article>
+```
+
+The `$session` array is shared into every Smarty view automatically (it's `session()->all()` snapshotted at render time), so flash messages and other keys are available inside `{if ...}` without an extra step. If you'd rather pull a single value via the tag — handy when you want a default — assign it first:
+
+```smarty
+{session key="status" assign="status"}
+{if $status}<div class="alert">{$status}</div>{/if}
 ```
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
 | `{config key="app.name" default=...}` | `config('app.name', $default)` |
 | `{session key="status" default=...}` | `session('status', $default)` |
+| `{session key="status" assign="status"}` | `$status = session('status')` (assigns instead of printing) |
+| `$session.status` (auto-shared) | `session('status')` |
 | `\|markdown` modifier | `Illuminate\Support\Str::markdown($value)` — pair with `nofilter` to keep the rendered HTML, the same way you'd reach for Blade's `{!! !!}` |
 | `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |

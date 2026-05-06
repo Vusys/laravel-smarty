@@ -31,6 +31,10 @@ class SmartyEngine implements Engine
 
         $template = $this->smarty->createTemplate($this->files->basename($path), null, null, $this->smarty);
 
+        if (! array_key_exists('session', $data) && app()->bound('session')) {
+            $data['session'] = session()->all();
+        }
+
         foreach ($data as $key => $value) {
             $template->assign($key, $value);
         }

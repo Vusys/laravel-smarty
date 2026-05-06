@@ -4,18 +4,32 @@ namespace Vusys\LaravelSmarty\Plugins;
 
 use Illuminate\Support\Facades\Gate;
 use Smarty\Smarty;
+use Smarty\Template;
 
 class AuthPlugins
 {
     public static function register(Smarty $smarty): void
     {
-        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'auth', static function ($params, $content, $template, &$repeat): string {
+        $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'auth', static function ($params, $content, Template $template, &$repeat): string {
+            static $stack = [];
+
             if ($content === null) {
-                if (! auth()->guard($params['guard'] ?? null)->check()) {
+                $user = auth()->guard($params['guard'] ?? null)->user();
+
+                if ($user === null) {
                     $repeat = false;
+
+                    return '';
                 }
 
+                $stack[] = $template->getTemplateVars('user');
+                $template->assign('user', $user);
+
                 return '';
+            }
+
+            if ($stack !== []) {
+                $template->assign('user', array_pop($stack));
             }
 
             return (string) $content;
