@@ -9,6 +9,7 @@ use Smarty\CompilerException;
 use Smarty\Smarty;
 use Throwable;
 use Vusys\LaravelSmarty\Debug\SourceMap;
+use Vusys\LaravelSmarty\Plugins\BlockState;
 
 class SmartyEngine implements Engine
 {
@@ -48,6 +49,14 @@ class SmartyEngine implements Engine
             return $template->fetch();
         } catch (Throwable $e) {
             throw $this->remapException($e, $path);
+        } finally {
+            // Block plugins like {auth} and {error} push/pop "outer value"
+            // frames during open/close. If the body throws, Smarty never
+            // re-invokes the close phase, so the entry would leak — and the
+            // closure-static stack survives across renders under Octane.
+            // Resetting at the render boundary keeps memory bounded and
+            // guarantees a fresh stack for the next render.
+            BlockState::reset();
         }
     }
 

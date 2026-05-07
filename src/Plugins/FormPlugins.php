@@ -17,8 +17,6 @@ class FormPlugins
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'old', static fn (array $params) => old($params['field'] ?? null, $params['default'] ?? null), false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'error', static function ($params, $content, Template $template, &$repeat): string {
-            static $stack = [];
-
             $field = $params['field'] ?? '';
             $errors = session('errors');
             $bag = $errors instanceof ViewErrorBag ? $errors->getBag('default') : null;
@@ -31,13 +29,15 @@ class FormPlugins
                     return '';
                 }
 
-                $stack[] = $template->getTemplateVars('message');
+                BlockState::push('error.message', $template->getTemplateVars('message'));
                 $template->assign('message', $bag->first($field));
 
                 return '';
             }
 
-            $template->assign('message', array_pop($stack));
+            if (BlockState::hasEntries('error.message')) {
+                $template->assign('message', BlockState::pop('error.message'));
+            }
 
             return (string) $content;
         }, false);
