@@ -33,9 +33,7 @@ class BlockState
 
     public static function pop(string $name): mixed
     {
-        if (empty(self::$stacks[$name])) {
-            return null;
-        }
+        self::$stacks[$name] ??= [];
 
         return array_pop(self::$stacks[$name]);
     }
