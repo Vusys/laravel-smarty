@@ -11,8 +11,6 @@ class AuthPlugins
     public static function register(Smarty $smarty): void
     {
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'auth', static function ($params, $content, Template $template, &$repeat): string {
-            static $stack = [];
-
             if ($content === null) {
                 $user = auth()->guard($params['guard'] ?? null)->user();
 
@@ -22,14 +20,14 @@ class AuthPlugins
                     return '';
                 }
 
-                $stack[] = $template->getTemplateVars('user');
+                BlockState::push('auth.user', $template->getTemplateVars('user'));
                 $template->assign('user', $user);
 
                 return '';
             }
 
-            if ($stack !== []) {
-                $template->assign('user', array_pop($stack));
+            if (BlockState::hasEntries('auth.user')) {
+                $template->assign('user', BlockState::pop('auth.user'));
             }
 
             return (string) $content;

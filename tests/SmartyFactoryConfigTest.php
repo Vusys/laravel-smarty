@@ -91,4 +91,53 @@ class SmartyFactoryConfigTest extends TestCase
             $files->deleteDirectory($dir);
         }
     }
+
+    public function test_custom_function_plugin_loads_from_plugins_paths(): void
+    {
+        $files = new Filesystem;
+        $dir = sys_get_temp_dir().'/laravel-smarty-tests/plugins-'.bin2hex(random_bytes(4));
+        $files->ensureDirectoryExists($dir);
+        $files->put(
+            $dir.'/function.greet.php',
+            '<?php function smarty_function_greet(array $params): string { return \'hello, \'.($params[\'name\'] ?? \'world\'); }',
+        );
+
+        $this->app['config']->set('smarty.plugins_paths', [$dir]);
+
+        $files->put($this->viewsPath.'/probe_greet.tpl', '{greet name="ada"}');
+
+        try {
+            $output = view('probe_greet')->render();
+
+            $this->assertStringContainsString('hello, ada', $output);
+        } finally {
+            $files->delete($this->viewsPath.'/probe_greet.tpl');
+            $files->deleteDirectory($dir);
+        }
+    }
+
+    public function test_custom_block_plugin_loads_from_plugins_paths(): void
+    {
+        $files = new Filesystem;
+        $dir = sys_get_temp_dir().'/laravel-smarty-tests/plugins-'.bin2hex(random_bytes(4));
+        $files->ensureDirectoryExists($dir);
+        $files->put(
+            $dir.'/block.banner.php',
+            '<?php function smarty_block_banner(array $params, ?string $content, $template, &$repeat): string {'
+            .' if ($content === null) { return \'\'; } return \'[banner]\'.$content.\'[/banner]\'; }',
+        );
+
+        $this->app['config']->set('smarty.plugins_paths', [$dir]);
+
+        $files->put($this->viewsPath.'/probe_banner.tpl', '{banner}hi{/banner}');
+
+        try {
+            $output = view('probe_banner')->render();
+
+            $this->assertStringContainsString('[banner]hi[/banner]', $output);
+        } finally {
+            $files->delete($this->viewsPath.'/probe_banner.tpl');
+            $files->deleteDirectory($dir);
+        }
+    }
 }
