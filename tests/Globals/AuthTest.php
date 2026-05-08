@@ -27,6 +27,29 @@ class AuthTest extends TestCase
         $this->assertSame($user, $auth->user);
     }
 
+    public function test_isset_reports_known_properties(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $auth = Auth::resolve();
+        $this->assertNotNull($auth);
+
+        $this->assertTrue(isset($auth->check));
+        $this->assertTrue(isset($auth->id));
+        $this->assertTrue(isset($auth->user));
+        $this->assertFalse(isset($auth->something_unknown));
+    }
+
+    public function test_get_returns_null_for_unknown_property(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $auth = Auth::resolve();
+        $this->assertNotNull($auth);
+
+        $this->assertNull($auth->something_unknown);
+    }
+
     public function test_is_returns_false_for_null(): void
     {
         $this->actingAs($this->stubUser());

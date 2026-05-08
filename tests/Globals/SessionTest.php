@@ -52,6 +52,25 @@ class SessionTest extends TestCase
         $this->assertIsString($session->token());
     }
 
+    public function test_token_returns_null_when_session_not_started(): void
+    {
+        // Note: no Session::start() — synthetic console-like state.
+        $session = Session::make();
+
+        $this->assertNull($session->token());
+    }
+
+    public function test_isset_reflects_session_keys(): void
+    {
+        SessionFacade::start();
+        SessionFacade::put('status', 'flashed!');
+
+        $session = Session::make();
+
+        $this->assertTrue(isset($session->status));
+        $this->assertFalse(isset($session->absent));
+    }
+
     public function test_flash_returns_keys_flashed_to_this_request(): void
     {
         SessionFacade::start();
