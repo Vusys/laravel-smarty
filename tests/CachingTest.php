@@ -48,14 +48,27 @@ class CachingTest extends TestCase
     public function test_csrf_field_re_evaluates_on_cache_hit(): void
     {
         Session::start();
-        $first = view('csrf')->render();
+        $first = view('csrf_field')->render();
         $this->assertStringContainsString('value="'.Session::token().'"', $first);
 
         // Rotate the CSRF token; the cached output must not pin the old one.
         Session::regenerateToken();
-        $second = view('csrf')->render();
+        $second = view('csrf_field')->render();
         $this->assertStringContainsString('value="'.Session::token().'"', $second);
         $this->assertStringNotContainsString('value="'.csrf_token().'_x"', $second);
+    }
+
+    public function test_csrf_token_re_evaluates_on_cache_hit(): void
+    {
+        Session::start();
+        $first = view('csrf_token')->render();
+        $this->assertStringContainsString('content="'.Session::token().'"', $first);
+
+        // Rotate the CSRF token; the cached output must not pin the old one.
+        Session::regenerateToken();
+        $second = view('csrf_token')->render();
+        $this->assertStringContainsString('content="'.Session::token().'"', $second);
+        $this->assertStringNotContainsString('content=""', $second);
     }
 
     public function test_old_re_evaluates_on_cache_hit(): void
