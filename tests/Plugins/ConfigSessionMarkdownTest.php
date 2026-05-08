@@ -4,6 +4,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Session;
+use Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class ConfigSessionMarkdownTest extends TestCase
@@ -25,13 +26,22 @@ class ConfigSessionMarkdownTest extends TestCase
         $this->assertStringContainsString('markdown=<p><strong>bold</strong></p>', $output);
     }
 
-    public function test_shared_session_can_be_overridden_by_view_data(): void
+    public function test_shared_session_renders_real_session_value(): void
     {
         Session::start();
         Session::put('status', 'real session');
 
-        $output = view('shared_session_override', ['session' => ['status' => 'override']])->render();
+        $output = view('shared_session_override')->render();
 
-        $this->assertStringContainsString('status=override', $output);
+        $this->assertStringContainsString('status=real session', $output);
+    }
+
+    public function test_passing_session_as_view_data_throws_reserved_variable(): void
+    {
+        Session::start();
+
+        $this->expectException(ReservedTemplateVariable::class);
+
+        view('shared_session_override', ['session' => ['status' => 'override']])->render();
     }
 }

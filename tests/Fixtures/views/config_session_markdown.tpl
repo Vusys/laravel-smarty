@@ -4,5 +4,5 @@ flash={session key="status"}
 flash_default={session key="missing" default="nope"}
 {session key="status" assign="status"}
 {if $status}assigned={$status}{/if}
-{if $session.status}shared={$session.status}{/if}
+{if $session->has('status')}shared={$session->status}{/if}
 markdown={"**bold**"|markdown nofilter}
