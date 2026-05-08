@@ -35,11 +35,11 @@ class RequestTest extends TestCase
     public function test_route_returns_route_parameter_or_null(): void
     {
         RouteFacade::get('/users/{username}', fn () => 'ok')->name('users.show');
-        $this->get('/users/bryan');
+        $this->get('/users/alice');
 
         $request = Request::make();
 
-        $this->assertSame('bryan', $request->route('username'));
+        $this->assertSame('alice', $request->route('username'));
         $this->assertNull($request->route('missing'));
     }
 

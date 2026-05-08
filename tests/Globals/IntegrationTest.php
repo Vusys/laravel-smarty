@@ -9,9 +9,10 @@ use Vusys\LaravelSmarty\Tests\TestCase;
 
 /**
  * End-to-end tests: render real Smarty templates that hit each wrapper
- * through the auto-share point. These prove that the syntax forms
- * documented in PACKAGE_ISSUES.md actually compile and dispatch
- * correctly through Smarty 5.
+ * through the auto-share point. These prove the documented usage
+ * patterns (`{if $auth}…`, `{$request->routeIs('foo.*')}`,
+ * `{$route->to(...)}` as `{include}` parameters, etc.) actually compile
+ * and dispatch correctly through Smarty 5.
  */
 class IntegrationTest extends TestCase
 {
