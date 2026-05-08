@@ -116,7 +116,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | `extension`     | `tpl`                                          | File extension registered as the highest-priority view extension. |
 | `compile_path`  | `storage_path('framework/smarty/compile')`     | Where Smarty writes compiled templates. |
 | `cache_path`    | `storage_path('framework/smarty/cache')`       | Where Smarty writes its output cache. |
-| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{error}` / `{csrf_field}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared `$session` array are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
+| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared `$session` array are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
 | `cache_lifetime`| `3600`                                         | Cache lifetime in seconds when `caching` is on. |
 | `force_compile` | `false`                                        | Recompile every render. Useful in development. |
 | `debugging`     | `false`                                        | Smarty's debug console. |
@@ -214,6 +214,8 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 ### Form helpers
 
 ```smarty
+<meta name="csrf-token" content="{csrf_token}">
+
 <form method="post" action="{route name='posts.update' post=$post->id}">
   {csrf_field}
   {method_field method="PUT"}
@@ -230,7 +232,8 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 
 | Tag | Equivalent |
 |-----|------------|
-| `{csrf_field}` | `csrf_field()` |
+| `{csrf_field}` | `csrf_field()` — full hidden input |
+| `{csrf_token}` | `csrf_token()` — raw token, e.g. for `<meta>` tags or AJAX headers |
 | `{method_field method="PUT"}` | `method_field('PUT')` |
 | `{old field="title" default=...}` | `old('title', $default)` |
 | `{error field="..."}...{/error}` | `@error('...')` — body renders only when there is a validation error; `$message` is bound inside |
