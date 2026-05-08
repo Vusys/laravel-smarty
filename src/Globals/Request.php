@@ -43,21 +43,26 @@ final class Request
     }
 
     /**
-     * Returns a route parameter (e.g. the `{username}` segment) as a
-     * string, or `null` when the binding doesn't have that
-     * parameter, or when there is no current route.
+     * Returns a route parameter as Laravel resolved it. For string
+     * segments (e.g. the `{username}` placeholder) this is the raw
+     * string; with implicit route-model binding it's the bound
+     * model instance. `$default` is used when the binding doesn't
+     * have that parameter, or when there is no current route.
      */
-    public function route(string $param): ?string
+    public function route(string $param, mixed $default = null): mixed
     {
         $route = $this->request->route();
 
         if ($route === null) {
-            return null;
+            return $default;
         }
 
+        // Laravel's Route::parameter() default is typed object|string|null,
+        // but we want to surface user-supplied scalars/arrays/etc. through.
+        // Pass null to the inner call and substitute our default after.
         $value = $route->parameter($param);
 
-        return is_string($value) ? $value : null;
+        return $value ?? $default;
     }
 
     /**

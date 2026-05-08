@@ -41,6 +41,28 @@ class RequestTest extends TestCase
 
         $this->assertSame('alice', $request->route('username'));
         $this->assertNull($request->route('missing'));
+        $this->assertSame('fallback', $request->route('missing', 'fallback'));
+    }
+
+    public function test_route_returns_bound_model_for_implicit_binding(): void
+    {
+        // Non-string route parameter — the wrapper hands back whatever
+        // Laravel resolved, including bound model instances.
+        RouteFacade::get('/posts/{post}', fn () => 'ok')->name('posts.show');
+        $this->get('/posts/42');
+
+        // Manually replace the resolved string with an object so we
+        // don't need a full Eloquent setup — Laravel's implicit
+        // binding does the same kind of substitution.
+        $bound = (object) ['id' => 42, 'title' => 'hi'];
+        $route = resolve('router')->getRoutes()->getByName('posts.show');
+        request()->setRouteResolver(fn () => $route);
+        $route->bind(request());
+        $route->setParameter('post', $bound);
+
+        $request = Request::make();
+
+        $this->assertSame($bound, $request->route('post'));
     }
 
     public function test_is_matches_url_patterns(): void

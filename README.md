@@ -340,11 +340,11 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 
 Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for output position — they emit straight to the template body and can't be used as a value (an `{include}` parameter, an `{if}` operand, an attribute expression). To plug that gap the package auto-shares four read-only wrapper objects on every render:
 
-| Variable | Wraps | Key methods |
-|----------|-------|-------------|
-| `$auth` (or `null` when guest) | `Auth::guard()` | `check`, `id`, `user`, `is(?User)`, `can($ability, ...)`, `guard($name)` |
-| `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
-| `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flash()` |
+| Variable | Wraps | Public surface |
+|----------|-------|----------------|
+| `$auth` (or `null` when guest) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, ...)`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
+| `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
+| `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
 | `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |
 
 ```smarty
@@ -376,6 +376,8 @@ Outside an `{auth}` block or `{if $auth}` guard, `{$auth->user->name}` raises `E
 ### Outside HTTP context (mail, queue, console)
 
 The wrappers are still auto-assigned but reflect Laravel's synthetic state: `$auth` is `null`, `$request->routeIs(…)` returns false, `$session->token()` is `null`, `$route->to(…)` still works (URL generation doesn't need a request). Templates that render in mail/queue contexts should treat all four as if they were guest/empty.
+
+`$session` also tolerates apps that don't bind a session store at all (stateless API workers, queue-only processes that strip session middleware, etc.) — `has()`, `get()`, `flashedKeys()` return false/default/empty rather than raising. The wrapper itself is always non-null; callers don't need to guard it.
 
 ## Pagination
 

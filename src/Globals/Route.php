@@ -37,9 +37,11 @@ final class Route
     }
 
     /**
-     * Generate a URL for a named route.
+     * Generate a URL for a named route. Accepts both associative
+     * (`['post' => $id]`) and positional (`[$id]`) parameter arrays,
+     * mirroring Laravel's `UrlGenerator::route()`.
      *
-     * @param  array<string, mixed>  $params
+     * @param  array<int|string, mixed>  $params
      */
     public function to(string $name, array $params = []): string
     {
@@ -49,7 +51,7 @@ final class Route
     /**
      * Like `to()` but emits a root-relative URL (no scheme/host).
      *
-     * @param  array<string, mixed>  $params
+     * @param  array<int|string, mixed>  $params
      */
     public function path(string $name, array $params = []): string
     {

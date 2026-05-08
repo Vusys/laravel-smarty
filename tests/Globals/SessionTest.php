@@ -71,7 +71,7 @@ class SessionTest extends TestCase
         $this->assertFalse(isset($session->absent));
     }
 
-    public function test_flash_returns_keys_flashed_to_this_request(): void
+    public function test_flashed_keys_returns_keys_flashed_to_this_request(): void
     {
         SessionFacade::start();
         // _flash.old is the bag of keys flashed *to* this request.
@@ -79,15 +79,33 @@ class SessionTest extends TestCase
 
         $session = Session::make();
 
-        $this->assertSame(['status', 'error'], $session->flash());
+        $this->assertSame(['status', 'error'], $session->flashedKeys());
     }
 
-    public function test_flash_is_empty_when_no_flash_payload(): void
+    public function test_flashed_keys_is_empty_when_no_flash_payload(): void
     {
         SessionFacade::start();
 
         $session = Session::make();
 
-        $this->assertSame([], $session->flash());
+        $this->assertSame([], $session->flashedKeys());
+    }
+
+    public function test_make_falls_back_when_session_unbound(): void
+    {
+        // Simulate a stateless app (no session.store binding) — e.g.
+        // queue worker or API-only project. The wrapper should still
+        // be usable and surface empty/null/false defaults uniformly.
+        $this->app->forgetInstance('session.store');
+        $this->app->offsetUnset('session.store');
+
+        $session = Session::make();
+
+        $this->assertFalse($session->has('anything'));
+        $this->assertNull($session->get('anything'));
+        $this->assertSame('default', $session->get('anything', 'default'));
+        $this->assertNull($session->token());
+        $this->assertSame([], $session->flashedKeys());
+        $this->assertNull($session->whatever);
     }
 }

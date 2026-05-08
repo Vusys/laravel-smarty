@@ -22,32 +22,28 @@ class AuthTest extends TestCase
         $auth = Auth::resolve();
 
         $this->assertNotNull($auth);
-        $this->assertTrue($auth->check);
         $this->assertSame(1, $auth->id);
         $this->assertSame($user, $auth->user);
     }
 
-    public function test_isset_reports_known_properties(): void
+    public function test_unknown_property_access_throws(): void
     {
         $this->actingAs($this->stubUser());
 
         $auth = Auth::resolve();
         $this->assertNotNull($auth);
 
-        $this->assertTrue(isset($auth->check));
-        $this->assertTrue(isset($auth->id));
-        $this->assertTrue(isset($auth->user));
-        $this->assertFalse(isset($auth->something_unknown));
-    }
+        // Real public readonly properties; accessing an undefined one
+        // raises an "Undefined property" warning that Laravel's error
+        // handler turns into an ErrorException — same loud-failure
+        // mechanism that catches `{$auth->user->name}` on guest. The
+        // intent is for typos like `{$auth->ide}` to fail in dev
+        // instead of rendering empty.
+        $this->expectException(\ErrorException::class);
+        $this->expectExceptionMessage('Undefined property');
 
-    public function test_get_returns_null_for_unknown_property(): void
-    {
-        $this->actingAs($this->stubUser());
-
-        $auth = Auth::resolve();
-        $this->assertNotNull($auth);
-
-        $this->assertNull($auth->something_unknown);
+        /** @phpstan-ignore property.notFound */
+        $auth->ide; // intentional typo
     }
 
     public function test_is_returns_false_for_null(): void

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Vusys\LaravelSmarty\Globals;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Support\Facades\Auth as AuthFacade;
 use Illuminate\Support\Facades\Gate;
 
@@ -19,12 +18,25 @@ use Illuminate\Support\Facades\Gate;
  * an empty string. That surfaces "I forgot the guest case" bugs in
  * development. Users who prefer silent rendering can lower
  * `smarty.error_reporting`, accepting the trade-off.
+ *
+ * Use `{if $auth}…{/if}` as the truthiness check; the property
+ * surface is intentionally minimal (`id`, `user`) so that typos like
+ * `{$auth->ide}` raise an "Cannot access undefined property" error
+ * instead of silently rendering empty.
  */
 final class Auth
 {
-    public function __construct(
-        private readonly Guard $guard,
-    ) {}
+    /**
+     * Mirrors `auth()->id()`. Typed `mixed` because Laravel allows
+     * custom identifier types (typically `int|string`, occasionally
+     * UUID/object).
+     */
+    public readonly mixed $id;
+
+    public function __construct(public readonly Authenticatable $user)
+    {
+        $this->id = $this->user->getAuthIdentifier();
+    }
 
     /**
      * Resolve the wrapper for a guard, or `null` when that guard has
@@ -33,28 +45,13 @@ final class Auth
      */
     public static function resolve(?string $guard = null): ?self
     {
-        $resolved = AuthFacade::guard($guard);
+        $user = AuthFacade::guard($guard)->user();
 
-        if ($resolved->user() === null) {
+        if ($user === null) {
             return null;
         }
 
-        return new self($resolved);
-    }
-
-    public function __get(string $property): mixed
-    {
-        return match ($property) {
-            'check' => true, // wrapper only exists when authed; check is always true here
-            'id' => $this->guard->id(),
-            'user' => $this->guard->user(),
-            default => null,
-        };
-    }
-
-    public function __isset(string $property): bool
-    {
-        return in_array($property, ['check', 'id', 'user'], true);
+        return new self($user);
     }
 
     /**
@@ -68,13 +65,7 @@ final class Auth
             return false;
         }
 
-        $current = $this->guard->user();
-
-        if ($current === null) {
-            return false;
-        }
-
-        return $current->getAuthIdentifier() === $user->getAuthIdentifier();
+        return $this->user->getAuthIdentifier() === $user->getAuthIdentifier();
     }
 
     /**
@@ -83,7 +74,7 @@ final class Auth
      */
     public function can(string $ability, mixed ...$arguments): bool
     {
-        return Gate::forUser($this->guard->user())->check($ability, $arguments);
+        return Gate::forUser($this->user)->check($ability, $arguments);
     }
 
     /**
