@@ -24,7 +24,7 @@ final class Session
     public static function make(): self
     {
         /** @var SessionContract $session */
-        $session = app('session.store');
+        $session = resolve('session.store');
 
         return new self($session);
     }
@@ -71,6 +71,6 @@ final class Session
     {
         $keys = $this->session->get('_flash.old', []);
 
-        return is_array($keys) ? array_values(array_filter($keys, 'is_string')) : [];
+        return is_array($keys) ? array_values(array_filter($keys, is_string(...))) : [];
     }
 }

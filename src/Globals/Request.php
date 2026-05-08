@@ -26,7 +26,7 @@ final class Request
     public static function make(): self
     {
         /** @var HttpRequest $request */
-        $request = app('request');
+        $request = resolve('request');
 
         return new self($request);
     }

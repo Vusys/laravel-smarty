@@ -31,7 +31,7 @@ final class Route
     public static function make(): self
     {
         /** @var UrlGenerator $url */
-        $url = app(UrlGenerator::class);
+        $url = resolve(UrlGenerator::class);
 
         return new self($url);
     }

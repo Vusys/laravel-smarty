@@ -64,7 +64,7 @@ final class Auth
      */
     public function is(?Authenticatable $user): bool
     {
-        if ($user === null) {
+        if (! $user instanceof Authenticatable) {
             return false;
         }
 
