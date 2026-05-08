@@ -84,4 +84,37 @@ class IntegrationTest extends TestCase
         $this->assertStringContainsString('src="'.asset('img/logo.svg').'"', $output);
         $this->assertStringContainsString('/posts', $output);
     }
+
+    public function test_request_method_call_inside_class_array_plugin(): void
+    {
+        // Combination test: {class array=[..., 'is-active' => $request->routeIs(...)]}
+        // exercises Smarty's array-literal expression parser passing a method-call
+        // value into the `{class}` plugin. Confirms the nav-active example from
+        // the README actually compiles and renders.
+        RouteFacade::get('/feed', fn () => 'ok')->name('feed.index');
+        RouteFacade::get('/explore', fn () => 'ok')->name('explore.index');
+
+        $this->get('/feed');
+        $output = view('globals_combined_class')->render();
+        $this->assertStringContainsString('class="nav-item is-active"', $output);
+        $this->assertStringContainsString('href="'.url('/feed').'"', $output);
+
+        $this->get('/explore');
+        $output = view('globals_combined_class')->render();
+        $this->assertStringContainsString('class="nav-item"', $output);
+        $this->assertStringNotContainsString('is-active', $output);
+    }
+
+    public function test_route_method_call_as_include_parameter(): void
+    {
+        // Combination test: {include file="..." action_url=$route->to(...)}.
+        // Method call as an include-parameter value — one of the original
+        // motivations for this whole change set, since plugin function tags
+        // (e.g. `{route name=...}`) can't be used as parameter values.
+        RouteFacade::get('/posts/{post}/replies', fn () => 'ok')->name('posts.replies.store');
+
+        $output = view('globals_combined_include')->render();
+
+        $this->assertStringContainsString('action="'.url('/posts/42/replies').'"', $output);
+    }
 }
