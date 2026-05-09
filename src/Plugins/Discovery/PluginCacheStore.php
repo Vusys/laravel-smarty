@@ -35,7 +35,7 @@ class PluginCacheStore
     {
         $path = self::path();
 
-        if ($path === null || ! is_file($path)) {
+        if (! is_file($path)) {
             return null;
         }
 
@@ -86,11 +86,8 @@ class PluginCacheStore
     public static function store(array $namespaces, array $manualClasses, array $descriptors): void
     {
         $path = self::path();
-        if ($path === null) {
-            return;
-        }
-
         $directory = dirname($path);
+
         if (! is_dir($directory)) {
             return;
         }
@@ -106,29 +103,14 @@ class PluginCacheStore
     public static function clear(): void
     {
         $path = self::path();
-        if ($path !== null && is_file($path)) {
+        if (is_file($path)) {
             @unlink($path);
         }
     }
 
-    public static function path(): ?string
+    public static function path(): string
     {
-        if (self::$pathOverride !== null) {
-            return self::$pathOverride;
-        }
-
-        // Wrapped in function_exists + try/catch so the package can be
-        // referenced from non-Laravel bootstraps (e.g. dump tooling)
-        // without a hard failure — the cache simply isn't used there.
-        if (! function_exists('app')) {
-            return null;
-        }
-
-        try {
-            return app()->bootstrapPath('cache/laravel-smarty-plugins.php');
-        } catch (\Throwable) {
-            return null;
-        }
+        return self::$pathOverride ?? app()->bootstrapPath('cache/laravel-smarty-plugins.php');
     }
 
     /**

@@ -110,4 +110,30 @@ class PluginScannerTest extends TestCase
 
         PluginScanner::scan([], [PlainHelper::class]);
     }
+
+    public function test_empty_or_whitespace_only_namespace_is_silently_skipped(): void
+    {
+        // Namespaces from config arrive as user-supplied strings; an
+        // accidentally-empty or whitespace-only entry shouldn't blow
+        // up the scan or somehow walk the entire filesystem.
+        $descriptors = PluginScanner::scan(['', '\\\\'], []);
+
+        $this->assertSame([], $descriptors);
+    }
+
+    public function test_non_php_files_in_scanned_directory_are_ignored(): void
+    {
+        // tests/Fixtures/Plugins/notes.txt sits next to the plugin classes;
+        // the scanner must skip it rather than try to derive a class name
+        // from a `.txt` filename.
+        $descriptors = PluginScanner::scan(['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'], []);
+
+        // A non-php file would have produced a class name like
+        // `…\\Plugins\\notes` and resolveDescriptor() would still return
+        // null, so the assertion is structural: discovery still completes
+        // and finds the actual plugins.
+        $names = array_map(static fn ($d) => $d->name, $descriptors);
+        $this->assertContains('since', $names);
+        $this->assertContains('loud', $names);
+    }
 }

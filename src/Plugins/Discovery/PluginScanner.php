@@ -163,12 +163,7 @@ class PluginScanner
             return;
         }
 
-        $loader = self::composerLoader();
-        if (! $loader instanceof ClassLoader) {
-            return;
-        }
-
-        foreach (self::directoriesForNamespace($loader, $namespace) as $directory) {
+        foreach (self::directoriesForNamespace(self::composerLoader(), $namespace) as $directory) {
             if (! is_dir($directory)) {
                 continue;
             }
@@ -219,16 +214,17 @@ class PluginScanner
         return $directories;
     }
 
-    private static function composerLoader(): ?ClassLoader
+    private static function composerLoader(): ClassLoader
     {
-        $functions = spl_autoload_functions();
-
-        foreach ($functions as $autoloader) {
+        foreach (spl_autoload_functions() as $autoloader) {
             if (is_array($autoloader) && $autoloader[0] instanceof ClassLoader) {
                 return $autoloader[0];
             }
         }
 
-        return null;
+        // Unreachable in any composer-installed Laravel app — Composer's
+        // autoloader is what's loading this class right now. Fail loud
+        // if we ever land here, so the misconfiguration surfaces at boot.
+        throw new \RuntimeException('Composer ClassLoader not registered; cannot scan plugin namespaces.');
     }
 }
