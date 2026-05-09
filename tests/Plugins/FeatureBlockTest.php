@@ -93,6 +93,69 @@ class FeatureBlockTest extends TestCase
             'register() should install the {feature} block when Pennant is available',
         );
     }
+
+    public function test_register_installs_feature_active_modifier_when_pennant_is_installed(): void
+    {
+        $smarty = new Smarty;
+
+        FeaturePlugins::register($smarty);
+
+        $this->assertNotNull(
+            $smarty->getRegisteredPlugin(Smarty::PLUGIN_MODIFIER, 'feature_active'),
+            'register() should install the feature_active modifier when Pennant is available',
+        );
+    }
+
+    public function test_feature_block_inverse_renders_when_flag_is_inactive(): void
+    {
+        Feature::define('on-flag', static fn () => true);
+        Feature::define('off-flag', static fn () => false);
+
+        $output = view('feature_inverse')->render();
+
+        $this->assertStringContainsString('[off]', $output);
+        $this->assertStringContainsString('[on-positive]', $output);
+        $this->assertStringNotContainsString('[on]', $output);
+        $this->assertStringNotContainsString('[on-when-inverse]', $output);
+    }
+
+    public function test_feature_block_inverse_does_not_evaluate_body_when_active(): void
+    {
+        Feature::define('on-flag', static fn () => true);
+
+        $output = view('feature_inverse_lazy')->render();
+
+        $this->assertStringContainsString('G=skipped', $output);
+        $this->assertStringNotContainsString('F=', $output);
+    }
+
+    public function test_feature_block_inverse_respects_for_scope(): void
+    {
+        Feature::define('beta-export', static fn (string $scope) => $scope === 'allowed-user');
+
+        $allowedOutput = view('feature_inverse_for', ['user' => 'allowed-user'])->render();
+        $deniedOutput = view('feature_inverse_for', ['user' => 'denied-user'])->render();
+
+        $this->assertStringNotContainsString('[wide', $allowedOutput);
+        $this->assertStringContainsString('[wide for denied-user]', $deniedOutput);
+    }
+
+    public function test_feature_active_modifier_in_if_expression(): void
+    {
+        Feature::define('on-flag', static fn () => true);
+        Feature::define('off-flag', static fn () => false);
+        Feature::define('beta-export', static fn (string $scope) => $scope === 'allowed-user');
+
+        $allowedOutput = view('feature_active_modifier', ['user' => 'allowed-user'])->render();
+        $deniedOutput = view('feature_active_modifier', ['user' => 'denied-user'])->render();
+
+        $this->assertStringContainsString('[positive]', $allowedOutput);
+        $this->assertStringContainsString('[negative-off]', $allowedOutput);
+        $this->assertStringContainsString('[for-positive]', $allowedOutput);
+
+        $this->assertStringContainsString('[for-negative]', $deniedOutput);
+        $this->assertStringNotContainsString('[for-positive]', $deniedOutput);
+    }
 }
 
 /**
