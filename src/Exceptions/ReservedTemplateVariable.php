@@ -9,8 +9,15 @@ use LogicException;
 /**
  * Thrown when user-supplied view data contains a key that collides with
  * one of the auto-shared wrapper variables ($auth, $request, $session,
- * $route). Treating this as a programmer error — silently letting user
- * data win would mask typos and produce confusing template output.
+ * $route, $errors). Treating this as a programmer error — silently
+ * letting user data win would mask typos and produce confusing template
+ * output.
+ *
+ * Exception: an `errors` key whose value is a `ViewErrorBag` is
+ * suppressed silently in `SmartyEngine::get()`, because Laravel's stock
+ * `ShareErrorsFromSession` middleware injects exactly that on every
+ * request — and the package's `$errors` wrapper wraps the same bag, so
+ * the visible template behaviour is identical.
  */
 class ReservedTemplateVariable extends LogicException
 {
