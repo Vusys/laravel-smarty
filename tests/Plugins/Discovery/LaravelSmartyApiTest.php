@@ -106,23 +106,28 @@ class LaravelSmartyApiTest extends TestCase
         PluginCacheStore::$pathOverride = $cachePath;
 
         try {
-            // First render writes the cache through `registerOn`, which
-            // drives `resolveDescriptors()`. Force a flush of in-memory
-            // state and render again — the second pass must hit the
-            // file-cache load branch instead of rescanning.
-            view('discovery')->render();
+            // First, write the cache through the public API so we have a
+            // real, valid cache file on disk with the right fingerprint.
+            LaravelSmarty::rebuildDiscoveryCache();
             $this->assertFileExists($cachePath);
 
-            // Reset only the in-memory memoisation (NOT the namespace
-            // list, NOT the cache file) so the next resolve must come
-            // from disk.
+            // Drop only in-memory memoisation; the file stays. The next
+            // resolveDescriptors() call must take the cached-file branch.
             $reflection = new \ReflectionClass(LaravelSmarty::class);
             $resolvedProp = $reflection->getProperty('resolved');
             $resolvedProp->setValue(null, null);
 
-            $output = view('discovery')->render();
+            // Invoke resolveDescriptors directly so we don't rely on the
+            // view-engine resolver (which caches the Smarty instance after
+            // the first render and would short-circuit this path).
+            $resolveMethod = $reflection->getMethod('resolveDescriptors');
+            $descriptors = $resolveMethod->invoke(null);
 
-            $this->assertStringContainsString('since=[raw]', $output);
+            $names = array_map(static fn ($d) => $d->name, $descriptors);
+            $this->assertContains('since', $names);
+
+            // Memoisation cache is now populated from the file load.
+            $this->assertSame($descriptors, $resolvedProp->getValue());
         } finally {
             PluginCacheStore::$pathOverride = null;
             @unlink($cachePath);
