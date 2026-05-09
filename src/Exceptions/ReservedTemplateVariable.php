@@ -18,7 +18,7 @@ class ReservedTemplateVariable extends LogicException
     {
         return new self(
             "View variable \${$name} is reserved by laravel-smarty's auto-share. "
-            .'Rename your view-data key, or replace the auto-share via SmartyFactory::configure().'
+            .'Rename your view-data key.'
         );
     }
 }

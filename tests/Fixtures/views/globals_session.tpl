@@ -1,3 +1,3 @@
-status={$session->status|escape}
+status={$session->status}
 has-error={if $session->has('error')}yes{else}no{/if}
-default={$session->get('absent', 'd')|escape}
+default={$session->get('absent', 'd')}

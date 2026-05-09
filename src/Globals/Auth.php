@@ -61,11 +61,7 @@ final class Auth
      */
     public function is(?Authenticatable $user): bool
     {
-        if (! $user instanceof Authenticatable) {
-            return false;
-        }
-
-        return $this->user->getAuthIdentifier() === $user->getAuthIdentifier();
+        return $user?->getAuthIdentifier() === $this->user->getAuthIdentifier();
     }
 
     /**

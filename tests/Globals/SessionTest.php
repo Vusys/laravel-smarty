@@ -73,13 +73,22 @@ class SessionTest extends TestCase
 
     public function test_flashed_keys_returns_keys_flashed_to_this_request(): void
     {
+        // Goes through Laravel's actual flash mechanism (flash + ageFlashData)
+        // rather than seeding _flash.old directly, so a Laravel-side rename of
+        // the underlying bag would surface here in CI rather than silently
+        // turning flashedKeys() into a constant [].
         SessionFacade::start();
-        // _flash.old is the bag of keys flashed *to* this request.
-        SessionFacade::put('_flash.old', ['status', 'error']);
+        SessionFacade::flash('status', 'saved!');
+        SessionFacade::flash('error', 'oops');
+
+        // ageFlashData is what the session middleware calls between requests:
+        // moves _flash.new into _flash.old (i.e. "what was flashed last
+        // request, available this request").
+        SessionFacade::ageFlashData();
 
         $session = Session::make();
 
-        $this->assertSame(['status', 'error'], $session->flashedKeys());
+        $this->assertEqualsCanonicalizing(['status', 'error'], $session->flashedKeys());
     }
 
     public function test_flashed_keys_is_empty_when_no_flash_payload(): void
@@ -89,6 +98,20 @@ class SessionTest extends TestCase
         $session = Session::make();
 
         $this->assertSame([], $session->flashedKeys());
+    }
+
+    public function test_flashed_keys_filters_non_string_entries(): void
+    {
+        // Defensive: if anything ever writes non-string entries into
+        // _flash.old (custom session driver, faulty middleware), they
+        // should be skipped rather than blow up downstream consumers
+        // that expect string keys.
+        SessionFacade::start();
+        SessionFacade::put('_flash.old', ['status', 42, null, 'error']);
+
+        $session = Session::make();
+
+        $this->assertSame(['status', 'error'], $session->flashedKeys());
     }
 
     public function test_make_falls_back_when_session_unbound(): void

@@ -367,7 +367,7 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 
 ### Reserved names
 
-`auth`, `request`, `session`, and `route` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. If you genuinely want to swap one out, replace the auto-share via `SmartyFactory::configure()`.
+`auth`, `request`, `session`, and `route` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. Rename the colliding view-data key.
 
 ### `$auth` is null when guest — by design
 

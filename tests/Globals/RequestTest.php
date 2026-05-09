@@ -42,6 +42,32 @@ class RequestTest extends TestCase
         $this->assertSame('fallback', $request->route('post', 'fallback'));
     }
 
+    public function test_route_distinguishes_absent_from_null_parameter(): void
+    {
+        // A parameter explicitly bound to `null` is *returned* as null,
+        // not replaced by the default — so user code can tell "this
+        // route doesn't have that key" apart from "the value is null".
+        // In practice route params can't legitimately be null today
+        // (string segments are always strings, implicit binding either
+        // resolves or 404s), but pinning the contract guards against
+        // someone setting it via Route::setParameter() in middleware.
+        RouteFacade::get('/items/{item}', fn () => 'ok')->name('items.show');
+        $this->get('/items/x');
+
+        $route = resolve('router')->getRoutes()->getByName('items.show');
+        request()->setRouteResolver(fn () => $route);
+        $route->bind(request());
+        $route->setParameter('item', null);
+
+        $request = Request::make();
+
+        // Present-but-null returns null, even when default is non-null.
+        $this->assertNull($request->route('item', 'fallback'));
+
+        // Absent returns the default.
+        $this->assertSame('fallback', $request->route('missing', 'fallback'));
+    }
+
     public function test_route_returns_route_parameter_or_null(): void
     {
         RouteFacade::get('/users/{username}', fn () => 'ok')->name('users.show');
