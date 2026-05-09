@@ -143,4 +143,28 @@ return [
 
     'error_reporting' => null,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Security Policy
+    |--------------------------------------------------------------------------
+    |
+    | Apply a \Smarty\Security policy to every render. Accepts:
+    |
+    |   null        — no security (default, backwards compatible).
+    |   'balanced'  — Vusys\LaravelSmarty\Security\BalancedSecurityPolicy:
+    |                 sensible defaults for admin-authored templates.
+    |   'strict'    — Vusys\LaravelSmarty\Security\StrictSecurityPolicy:
+    |                 hardened defaults for untrusted, user-submitted
+    |                 templates (modifier allow-list, no constants, no
+    |                 streams, no {fetch}/{eval}/{include_php}).
+    |   class-string — a custom subclass of \Smarty\Security.
+    |
+    | Closures are intentionally not accepted — they break `config:cache`.
+    | For dynamic construction use SmartyFactory::configure() in a service
+    | provider's boot() and call $smarty->enableSecurity($policy) yourself.
+    |
+    */
+
+    'security' => null,
+
 ];
