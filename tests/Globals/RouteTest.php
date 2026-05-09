@@ -26,6 +26,18 @@ class RouteTest extends TestCase
         $this->assertSame(url('/explore'), $route->to('explore.index'));
     }
 
+    public function test_to_accepts_positional_param_array(): void
+    {
+        // Mirrors Laravel's UrlGenerator::route() which accepts both
+        // associative and positional arrays — positional values bind
+        // to route placeholders in declaration order.
+        RouteFacade::get('/posts/{post}', fn () => 'ok')->name('posts.show');
+
+        $route = Route::make();
+
+        $this->assertSame(url('/posts/42'), $route->to('posts.show', [42]));
+    }
+
     public function test_path_emits_root_relative_url(): void
     {
         RouteFacade::get('/posts/{post}', fn () => 'ok')->name('posts.show');

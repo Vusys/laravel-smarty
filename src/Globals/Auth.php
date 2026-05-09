@@ -65,10 +65,12 @@ final class Auth
     }
 
     /**
-     * Mirrors `Gate::check($ability, [...arguments])` — accepts any
-     * number of model/argument values like Laravel's gate does.
+     * Mirrors `Authenticatable::can($ability, $arguments)` — pass the
+     * model directly for the common single-argument case, or an array
+     * for multi-argument abilities. Same shape as Laravel's
+     * `$user->can(…)`.
      */
-    public function can(string $ability, mixed ...$arguments): bool
+    public function can(string $ability, mixed $arguments = []): bool
     {
         return Gate::forUser($this->user)->check($ability, $arguments);
     }

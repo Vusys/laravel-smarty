@@ -68,8 +68,11 @@ class AuthTest extends TestCase
         $this->assertFalse($auth->is($this->stubUser(43)));
     }
 
-    public function test_can_defers_to_gate(): void
+    public function test_can_with_single_model_argument(): void
     {
+        // The common case: $auth->can('update', $post) — same shape as
+        // Laravel's $user->can('update', $post). Laravel's Gate::check
+        // wraps a single non-array argument into [arg] internally.
         $this->actingAs($this->stubUser());
 
         Gate::define('do-thing', fn ($user, $arg) => $arg === 'allowed');
@@ -81,8 +84,13 @@ class AuthTest extends TestCase
         $this->assertFalse($auth->can('do-thing', 'denied'));
     }
 
-    public function test_can_supports_variadic_arguments(): void
+    public function test_can_with_array_of_arguments(): void
     {
+        // Multi-argument abilities take an array, matching Laravel's
+        // $user->can('compare', [$a, $b]) shape — NOT variadic. A user
+        // writing $auth->can('foo', [$bar]) gets the same behaviour as
+        // $user->can('foo', [$bar]) in plain Laravel, which is the
+        // ergonomic anchor.
         $this->actingAs($this->stubUser());
 
         Gate::define('compare', fn ($user, $a, $b) => $a === $b);
@@ -90,8 +98,8 @@ class AuthTest extends TestCase
         $auth = Auth::resolve();
         $this->assertNotNull($auth);
 
-        $this->assertTrue($auth->can('compare', 'x', 'x'));
-        $this->assertFalse($auth->can('compare', 'x', 'y'));
+        $this->assertTrue($auth->can('compare', ['x', 'x']));
+        $this->assertFalse($auth->can('compare', ['x', 'y']));
     }
 
     public function test_guard_returns_null_when_named_guard_has_no_user(): void

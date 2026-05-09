@@ -342,7 +342,7 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 
 | Variable | Wraps | Public surface |
 |----------|-------|----------------|
-| `$auth` (or `null` when guest) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, ...)`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
+| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
 | `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
 | `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
 | `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |
@@ -361,17 +361,23 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 
 {* Flash messages — has() works because $session is a real object, not an array *}
 {if $session->has('status')}
-  <div class="notification is-success">{$session->status|escape}</div>
+  <div class="notification is-success">{$session->status}</div>
 {/if}
 ```
+
+`{$var}` is auto-escaped under the package's default `escape_html=true` config — that applies to wrapper output too. No explicit `|escape` needed.
 
 ### Reserved names
 
 `auth`, `request`, `session`, and `route` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. Rename the colliding view-data key.
 
-### `$auth` is null when guest — by design
+### `$auth` is null when no user is authenticated — by design
 
 Outside an `{auth}` block or `{if $auth}` guard, `{$auth->user->name}` raises `ErrorException: Attempt to read property "user" on null`. That's deliberate: silently rendering an empty string on guest is exactly the "I forgot the guest case" class of bug we want to surface during development. PHP 8.4 demotes "read property on null" to a warning, but Laravel's default error handler converts warnings to `ErrorException`, so the loud failure holds out of the box. Lower `smarty.error_reporting` if you want quieter output (and accept the trade-off).
+
+### `$auth->id` type caveat
+
+`$auth->id` is typed `mixed` because Laravel allows custom identifier types (typically `int|string`, occasionally UUID/object). The strict comparison in `{if $auth->id === $post->user_id}` — the canonical pattern — will quietly return false if the two sides differ in type (e.g. `int(42)` vs `string('42')`). If you query data from sources that don't preserve types (some JSON payloads, untyped session storage), cast on the way in or compare loosely.
 
 ### Outside HTTP context (mail, queue, console)
 
