@@ -422,7 +422,7 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 
 ## Auto-shared wrapper objects
 
-Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for output position — they emit straight to the template body and can't be used as a value (an `{include}` parameter, an `{if}` operand, an attribute expression). To plug that gap the package auto-shares four read-only wrapper objects on every render:
+Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for output position — they emit straight to the template body and can't be used as a value (an `{include}` parameter, an `{if}` operand, an attribute expression). To plug that gap the package auto-shares five read-only wrapper objects on every render:
 
 | Variable | Wraps | Public surface |
 |----------|-------|----------------|
@@ -430,6 +430,7 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 | `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
 | `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
 | `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |
+| `$errors` | `Illuminate\Support\ViewErrorBag` (read-only) | `any()`, `has($key)`, `count()`, `all($format = null)`, `first($key, $format = null)`, `get($key, $format = null)`, `getBag($name)`. Always non-null even outside session contexts. |
 
 ```smarty
 {* Active nav state without controller plumbing *}
@@ -447,13 +448,31 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 {if $session->has('status')}
   <div class="notification is-success">{$session->status}</div>
 {/if}
+
+{* Validation errors — iterate the whole bag or pull a single field *}
+{if $errors->any()}
+  <ul class="errors">
+    {foreach $errors->all() as $message}
+      <li>{$message|escape}</li>
+    {/foreach}
+  </ul>
+{/if}
+
+{if $errors->has('email')}
+  <p class="error">{$errors->first('email')|escape}</p>
+{/if}
+
+{* Named bag (e.g. login form on a registration page) *}
+{if $errors->getBag('login')->any()}
+  <p>Login failed.</p>
+{/if}
 ```
 
 `{$var}` is auto-escaped under the package's default `escape_html=true` config — that applies to wrapper output too. No explicit `|escape` needed.
 
 ### Reserved names
 
-`auth`, `request`, `session`, and `route` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. Rename the colliding view-data key.
+`auth`, `request`, `session`, `route`, and `errors` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. Rename the colliding view-data key.
 
 ### `$auth` is null when no user is authenticated — by design
 
@@ -465,9 +484,9 @@ Outside an `{auth}` block or `{if $auth}` guard, `{$auth->user->name}` raises `E
 
 ### Outside HTTP context (mail, queue, console)
 
-The wrappers are still auto-assigned but reflect Laravel's synthetic state: `$auth` is `null`, `$request->routeIs(…)` returns false, `$session->token()` is `null`, `$route->to(…)` still works (URL generation doesn't need a request). Templates that render in mail/queue contexts should treat all four as if they were guest/empty.
+The wrappers are still auto-assigned but reflect Laravel's synthetic state: `$auth` is `null`, `$request->routeIs(…)` returns false, `$session->token()` is `null`, `$route->to(…)` still works (URL generation doesn't need a request). Templates that render in mail/queue contexts should treat all five as if they were guest/empty.
 
-`$session` also tolerates apps that don't bind a session store at all (stateless API workers, queue-only processes that strip session middleware, etc.) — `has()`, `get()`, `flashedKeys()` return false/default/empty rather than raising. The wrapper itself is always non-null; callers don't need to guard it.
+`$session` and `$errors` also tolerate apps that don't bind a session store at all (stateless API workers, queue-only processes that strip session middleware, etc.) — `has()`, `get()`, `flashedKeys()`, `any()`, `first()` return false/default/empty rather than raising. The wrappers themselves are always non-null; callers don't need to guard them.
 
 ## Pagination
 

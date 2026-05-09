@@ -9,10 +9,10 @@ use Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 /**
- * Passing one of the four reserved auto-share keys ($auth, $request,
- * $session, $route) as view data is a programmer error — silently
- * letting user data win would mask typos and produce confusing
- * template output. The engine throws instead.
+ * Passing one of the five reserved auto-share keys ($auth, $request,
+ * $session, $route, $errors) as view data is a programmer error —
+ * silently letting user data win would mask typos and produce
+ * confusing template output. The engine throws instead.
  */
 class CollisionTest extends TestCase
 {
@@ -26,6 +26,7 @@ class CollisionTest extends TestCase
             'request' => ['request'],
             'session' => ['session'],
             'route' => ['route'],
+            'errors' => ['errors'],
         ];
     }
 
