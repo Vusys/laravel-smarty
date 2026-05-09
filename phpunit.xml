@@ -13,9 +13,4 @@
             <directory>src</directory>
         </include>
     </source>
-    <coverage>
-        <report>
-            <html outputDirectory="build/coverage"/>
-        </report>
-    </coverage>
 </phpunit>
