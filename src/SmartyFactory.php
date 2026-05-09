@@ -113,7 +113,7 @@ class SmartyFactory
 
         LaravelPlugins::register($smarty);
 
-        if ($policy = $this->resolveSecurityPolicy($smarty)) {
+        if (($policy = $this->resolveSecurityPolicy($smarty)) instanceof Security) {
             $smarty->enableSecurity($policy);
         }
 
