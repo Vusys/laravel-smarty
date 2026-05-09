@@ -13,6 +13,7 @@
     "require-dev": {
         "driftingly/rector-laravel": "^2.0",
         "larastan/larastan": "^2.9 || ^3.0",
+        "laravel/pennant": "^1.0|^2.0",
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
         "phpunit/phpunit": "^10.0|^11.0|^12.0",
