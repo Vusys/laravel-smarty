@@ -10,10 +10,11 @@ namespace Vusys\LaravelSmarty\Plugins\Discovery;
  * Production renders shouldn't pay the cost of walking the filesystem
  * on every cold start, so the discovery output is serialised to a PHP
  * file under `bootstrap/cache/` (mirroring Laravel's package manifest).
- * The file embeds a fingerprint of the inputs (configured + programmatic
- * namespaces, plus manually-registered classes), so adding a new
- * namespace or moving a class invalidates the cache without an explicit
- * `smarty:plugins:clear` step.
+ * The fingerprint covers two layers: the configured + programmatic
+ * namespaces and manually-registered classes, plus the *.php files
+ * within those namespaces (path + mtime). The file-layer hash means
+ * adding, removing, or modifying a plugin class invalidates the cache
+ * automatically — no explicit `smarty:plugins:clear` required.
  */
 class PluginCacheStore
 {
@@ -125,6 +126,10 @@ class PluginCacheStore
         $sortedManual = $manualClasses;
         sort($sortedManual);
 
-        return hash('sha256', serialize([$sortedNamespaces, $sortedManual]));
+        return hash('sha256', serialize([
+            $sortedNamespaces,
+            $sortedManual,
+            PluginScanner::fingerprintInputs($namespaces, $manualClasses),
+        ]));
     }
 }
