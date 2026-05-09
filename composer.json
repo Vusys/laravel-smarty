@@ -47,6 +47,9 @@
         "rector": "rector process",
         "rector:check": "rector process --dry-run",
         "pint": "pint",
-        "pint:check": "pint --test"
+        "pint:check": "pint --test",
+        "test": "phpunit",
+        "test:coverage": "XDEBUG_MODE=coverage phpunit --coverage-text",
+        "test:coverage-html": "XDEBUG_MODE=coverage phpunit --coverage-html=build/coverage"
     }
 }

@@ -118,6 +118,35 @@ class SmartyExceptionMapperTest extends TestCase
         $this->assertSame(realpath($regularFile), realpath((string) $frame['file']));
     }
 
+    public function test_leaves_frames_alone_when_file_or_line_keys_are_missing_or_wrong_type(): void
+    {
+        // Internal/native callable frames in PHP's stack traces sometimes
+        // omit `file` or `line` keys — e.g. frames from array_map's callback
+        // dispatch. The mapper must skip those frames defensively rather
+        // than choking on missing keys or wrong types.
+        $exception = $this->throwFromFakeCompiledFile(markerLine: 5);
+
+        $flat = FlattenException::createFromThrowable($exception);
+
+        // Inject a couple of malformed frames at the front of the trace.
+        $original = $flat->getTrace();
+        $malformed = [
+            ['function' => 'native_call'],                         // no file/line
+            ['file' => $this->compiledPath, 'line' => '7'],         // line is a string, not int
+            ['file' => 12345, 'line' => 7],                         // file is not a string
+        ];
+        (function () use ($malformed, $original) {
+            $this->trace = array_merge($malformed, $original);
+        })->call($flat);
+
+        // Must not throw and must still rewrite the legitimate frame.
+        $mapped = $this->mapper()->map($flat);
+
+        $frame = $this->findFrameByExactFile($mapped->getTrace(), $this->sourcePath);
+        $this->assertNotNull($frame);
+        $this->assertSame(5, $frame['line']);
+    }
+
     public function test_leaves_trace_unchanged_when_compiled_file_has_no_markers(): void
     {
         // Same shape as the rewrite test, but the fake compiled file

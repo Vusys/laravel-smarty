@@ -3,7 +3,11 @@
 namespace Vusys\LaravelSmarty\Tests;
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\View\Factory;
+use Illuminate\View\ViewException;
+use ReflectionMethod;
+use RuntimeException;
 use Vusys\LaravelSmarty\SmartyEngine;
 
 class SmartyEngineTest extends TestCase
@@ -81,5 +85,38 @@ class SmartyEngineTest extends TestCase
         $this->assertContains('partials.nav', $composed);
         $this->assertContains('layouts.main', $created);
         $this->assertContains('partials.nav', $created);
+    }
+
+    public function test_remap_falls_back_to_entry_when_compiled_frame_lacks_source_markers(): void
+    {
+        // A compiled .tpl.php that wasn't produced by LineTrackingCompiler
+        // (e.g. a stale compile from a prior install, or a third-party tool)
+        // has no /*__SLF*/ header. SourceMap::lookup returns null for those
+        // frames, so remapException must skip past and fall back to the
+        // entry-path / line 1 ViewException rather than crashing.
+        $files = new Filesystem;
+        $tplPhp = sys_get_temp_dir().'/laravel-smarty-tests/markerless.tpl.php';
+        $files->ensureDirectoryExists(dirname($tplPhp));
+        $files->put($tplPhp, '<?php throw new \\RuntimeException("boom from markerless");');
+
+        try {
+            require $tplPhp;
+            $this->fail('Expected RuntimeException to be thrown');
+        } catch (RuntimeException $thrown) {
+            // The thrown exception's getFile()/getLine() now point at our
+            // markerless .tpl.php file, which is exactly the trace shape
+            // remapException sees in real renders.
+            $engine = $this->app['view.engine.resolver']->resolve('smarty');
+            $remap = (new ReflectionMethod($engine, 'remapException'))
+                ->invoke($engine, $thrown, '/abs/views/entry.tpl');
+
+            $this->assertInstanceOf(ViewException::class, $remap);
+            $this->assertSame('/abs/views/entry.tpl', $remap->getFile());
+            $this->assertSame(1, $remap->getLine());
+            $this->assertStringContainsString('boom from markerless', $remap->getMessage());
+            $this->assertStringContainsString('/abs/views/entry.tpl', $remap->getMessage());
+        } finally {
+            $files->delete($tplPhp);
+        }
     }
 }
