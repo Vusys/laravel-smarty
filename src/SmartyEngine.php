@@ -6,6 +6,7 @@ namespace Vusys\LaravelSmarty;
 
 use Illuminate\Contracts\View\Engine;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\ViewErrorBag;
 use Illuminate\View\ViewException;
 use Smarty\CompilerException;
 use Smarty\Smarty;
@@ -52,9 +53,23 @@ class SmartyEngine implements Engine
         $template = $this->smarty->createTemplate($this->files->basename($path), null, null, $this->smarty);
 
         foreach (self::RESERVED_VARIABLES as $reserved) {
-            if (array_key_exists($reserved, $data)) {
-                throw ReservedTemplateVariable::for($reserved);
+            if (! array_key_exists($reserved, $data)) {
+                continue;
             }
+
+            // Laravel's stock `ShareErrorsFromSession` middleware (in the `web`
+            // group by default) calls `View::share('errors', $bag)` on every
+            // request, so `errors` arrives in $data as a `ViewErrorBag` even
+            // when the controller never set it. That's not a programmer error
+            // — the package's auto-shared `$errors` wraps the same bag — so
+            // drop the framework's share and let our wrapper take over below.
+            if ($reserved === 'errors' && $data[$reserved] instanceof ViewErrorBag) {
+                unset($data[$reserved]);
+
+                continue;
+            }
+
+            throw ReservedTemplateVariable::for($reserved);
         }
 
         foreach ($data as $key => $value) {

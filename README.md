@@ -474,6 +474,8 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 
 `auth`, `request`, `session`, `route`, and `errors` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. Rename the colliding view-data key.
 
+`$errors` has one carve-out: Laravel's stock `Illuminate\View\Middleware\ShareErrorsFromSession` middleware (in the default `web` group) calls `View::share('errors', …)` on every request, so an `Illuminate\Support\ViewErrorBag` is always present in the gathered view data. The engine silently drops that framework-injected share and lets the package's `$errors` wrapper take over — both paths surface the same underlying `ViewErrorBag`, so templates render identically. An `errors` key with any other value type still throws.
+
 ### `$auth` is null when no user is authenticated — by design
 
 Outside an `{auth}` block or `{if $auth}` guard, `{$auth->user->name}` raises `ErrorException: Attempt to read property "user" on null`. That's deliberate: silently rendering an empty string on guest is exactly the "I forgot the guest case" class of bug we want to surface during development. PHP 8.4 demotes "read property on null" to a warning, but Laravel's default error handler converts warnings to `ErrorException`, so the loud failure holds out of the box. Lower `smarty.error_reporting` if you want quieter output (and accept the trade-off).
