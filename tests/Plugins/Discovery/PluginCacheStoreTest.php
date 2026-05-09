@@ -6,6 +6,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginDescriptor;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class PluginCacheStoreTest extends TestCase
@@ -164,6 +165,77 @@ class PluginCacheStoreTest extends TestCase
         );
 
         $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
+    public function test_load_returns_null_when_a_new_php_file_appears_in_a_scanned_namespace(): void
+    {
+        // Real namespace that resolves to disk so the file-content layer
+        // of the fingerprint actually walks something. Drop a probe .php
+        // file into the directory after storing — the cache should now
+        // be considered stale because a class might have been added.
+        $namespaces = ['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'];
+
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'since', SinceModifier::class),
+        ]);
+
+        $this->assertNotNull(PluginCacheStore::load($namespaces, []));
+
+        $probe = __DIR__.'/../../Fixtures/Plugins/_TmpInvalidationProbe.php';
+        file_put_contents($probe, "<?php\n");
+
+        try {
+            $this->assertNull(PluginCacheStore::load($namespaces, []));
+        } finally {
+            @unlink($probe);
+        }
+    }
+
+    public function test_load_returns_null_when_a_manual_class_file_mtime_changes(): void
+    {
+        // Manual classes get fingerprinted by their backing file's mtime
+        // (resolved through reflection), so editing the class
+        // invalidates the cache without an explicit clear step.
+        $class = SinceModifier::class;
+
+        PluginCacheStore::store([], [$class], [
+            new PluginDescriptor('modifier', 'since', $class),
+        ]);
+
+        $this->assertNotNull(PluginCacheStore::load([], [$class]));
+
+        $file = (new \ReflectionClass($class))->getFileName();
+        $this->assertIsString($file);
+        $original = filemtime($file);
+
+        try {
+            touch($file, $original + 2);
+            clearstatcache(true, $file);
+
+            $this->assertNull(PluginCacheStore::load([], [$class]));
+        } finally {
+            touch($file, $original);
+            clearstatcache(true, $file);
+        }
+    }
+
+    public function test_load_hits_cache_when_namespace_files_are_unchanged(): void
+    {
+        // Round-trip with a real on-disk namespace — covers the path
+        // where the file-content fingerprint actually iterates entries
+        // (the other round-trip test uses a fake namespace that
+        // resolves to no directories).
+        $namespaces = ['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'];
+
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'since', SinceModifier::class),
+        ]);
+
+        $loaded = PluginCacheStore::load($namespaces, []);
+
+        $this->assertNotNull($loaded);
+        $this->assertCount(1, $loaded);
+        $this->assertSame('since', $loaded[0]->name);
     }
 
     public function test_path_falls_back_to_app_bootstrap_path_when_no_override(): void

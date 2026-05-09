@@ -121,6 +121,16 @@ class PluginScannerTest extends TestCase
         $this->assertSame([], $descriptors);
     }
 
+    public function test_fingerprint_inputs_silently_skips_empty_or_whitespace_only_namespace(): void
+    {
+        // Same defensive guard as scan() / classesIn(): a
+        // whitespace-only namespace must not trigger a real filesystem
+        // walk. The hash should match the no-input baseline.
+        $baseline = PluginScanner::fingerprintInputs([], []);
+
+        $this->assertSame($baseline, PluginScanner::fingerprintInputs(['', '\\\\'], []));
+    }
+
     public function test_non_php_files_in_scanned_directory_are_ignored(): void
     {
         // tests/Fixtures/Plugins/notes.txt sits next to the plugin classes;

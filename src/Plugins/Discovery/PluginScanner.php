@@ -29,6 +29,63 @@ use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 class PluginScanner
 {
     /**
+     * Hash the *.php files under each scanned namespace's directories
+     * plus the files backing each manual class, keyed by path with mtime
+     * as the value. Lets the cache invalidate when a class is added,
+     * removed, or modified within an already-known namespace — without
+     * the user having to run `smarty:plugins:clear` after every code
+     * change.
+     *
+     * @param  array<int, string>  $namespaces
+     * @param  array<int, class-string>  $manualClasses
+     */
+    public static function fingerprintInputs(array $namespaces, array $manualClasses): string
+    {
+        $entries = [];
+        $loader = self::composerLoader();
+
+        foreach ($namespaces as $namespace) {
+            $namespace = trim($namespace, '\\');
+            if ($namespace === '') {
+                continue;
+            }
+
+            foreach (self::directoriesForNamespace($loader, $namespace) as $directory) {
+                if (! is_dir($directory)) {
+                    continue;
+                }
+
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+                );
+
+                foreach ($iterator as $file) {
+                    if (! $file instanceof SplFileInfo || ! $file->isFile() || $file->getExtension() !== 'php') {
+                        continue;
+                    }
+
+                    $entries[$file->getPathname()] = $file->getMTime();
+                }
+            }
+        }
+
+        foreach ($manualClasses as $class) {
+            if (! class_exists($class)) {
+                continue;
+            }
+
+            $file = (new ReflectionClass($class))->getFileName();
+            if (is_string($file) && is_file($file)) {
+                $entries[$file] = filemtime($file);
+            }
+        }
+
+        ksort($entries);
+
+        return hash('sha256', serialize($entries));
+    }
+
+    /**
      * @param  array<int, string>  $namespaces
      * @param  array<int, class-string>  $manualClasses
      * @return array<int, PluginDescriptor>
