@@ -769,7 +769,7 @@ View::composer('layouts.main', function ($view) {
 });
 ```
 
-Caveat: data added by a composer to a sub-template's `View` instance is **not** currently propagated back into Smarty's variable scope — Smarty maintains its own data store and we only synthesise `View` objects so listeners can observe the template tree. View composers that *only* observe (logging, metrics, Debugbar) work today; composers that mutate template data are a known limitation.
+Data added by a composer via `$view->with(...)` (or `$view->withErrors(...)` etc.) is transcribed onto the actual sub-template before render, so the variables are visible inside `{extends}` layouts and `{include}` partials — same contract Blade gives. Both `composing:` and `creating:` listeners can mutate the View; either way the values reach the render scope. `View::share` precedence is unchanged: the global shared bag still feeds every render, with composer-added data layered on top (composer wins on key collision, matching Blade's `gatherData()` order).
 
 ### Debug tooling
 
