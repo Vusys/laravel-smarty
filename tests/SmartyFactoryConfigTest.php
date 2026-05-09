@@ -3,7 +3,11 @@
 namespace Vusys\LaravelSmarty\Tests;
 
 use Illuminate\Filesystem\Filesystem;
+use InvalidArgumentException;
+use Smarty\Security;
 use Smarty\Smarty;
+use Vusys\LaravelSmarty\Security\BalancedSecurityPolicy;
+use Vusys\LaravelSmarty\Security\StrictSecurityPolicy;
 use Vusys\LaravelSmarty\SmartyFactory;
 
 class SmartyFactoryConfigTest extends TestCase
@@ -116,6 +120,69 @@ class SmartyFactoryConfigTest extends TestCase
         }
     }
 
+    public function test_security_defaults_to_disabled(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+
+        $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
+
+        $this->assertNull($engine->smarty()->security_policy);
+    }
+
+    public function test_security_balanced_alias_resolves_to_class(): void
+    {
+        $this->app['config']->set('smarty.security', 'balanced');
+
+        view('hello', ['name' => 'World'])->render();
+
+        $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
+
+        $this->assertInstanceOf(BalancedSecurityPolicy::class, $engine->smarty()->security_policy);
+    }
+
+    public function test_security_strict_alias_resolves_to_class(): void
+    {
+        $this->app['config']->set('smarty.security', 'strict');
+
+        view('hello', ['name' => 'World'])->render();
+
+        $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
+
+        $this->assertInstanceOf(StrictSecurityPolicy::class, $engine->smarty()->security_policy);
+    }
+
+    public function test_security_accepts_custom_class_string(): void
+    {
+        $this->app['config']->set('smarty.security', CustomTestSecurityPolicy::class);
+
+        view('hello', ['name' => 'World'])->render();
+
+        $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
+
+        $this->assertInstanceOf(CustomTestSecurityPolicy::class, $engine->smarty()->security_policy);
+    }
+
+    public function test_security_throws_for_unknown_class(): void
+    {
+        $this->app['config']->set('smarty.security', '\\This\\Class\\Does\\Not\\Exist');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/expected null.*balanced.*strict.*class-string/i');
+
+        view('hello', ['name' => 'World'])->render();
+    }
+
+    public function test_security_throws_for_class_not_extending_smarty_security(): void
+    {
+        // \stdClass exists but isn't a Security subclass.
+        $this->app['config']->set('smarty.security', \stdClass::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/must extend.*Smarty.*Security/i');
+
+        view('hello', ['name' => 'World'])->render();
+    }
+
     public function test_custom_block_plugin_loads_from_plugins_paths(): void
     {
         $files = new Filesystem;
@@ -141,3 +208,5 @@ class SmartyFactoryConfigTest extends TestCase
         }
     }
 }
+
+class CustomTestSecurityPolicy extends Security {}

@@ -3,8 +3,12 @@
 namespace Vusys\LaravelSmarty;
 
 use Illuminate\Filesystem\Filesystem;
+use InvalidArgumentException;
+use Smarty\Security;
 use Smarty\Smarty;
 use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
+use Vusys\LaravelSmarty\Security\BalancedSecurityPolicy;
+use Vusys\LaravelSmarty\Security\StrictSecurityPolicy;
 
 /**
  * @phpstan-type SmartyConfig array{
@@ -22,6 +26,7 @@ use Vusys\LaravelSmarty\Plugins\LaravelPlugins;
  *     compile_check?: bool,
  *     default_modifiers?: list<string>|string,
  *     error_reporting?: int|null,
+ *     security?: string|null,
  * }
  */
 class SmartyFactory
@@ -108,10 +113,50 @@ class SmartyFactory
 
         LaravelPlugins::register($smarty);
 
+        if ($policy = $this->resolveSecurityPolicy($smarty)) {
+            $smarty->enableSecurity($policy);
+        }
+
         foreach (self::$configurators as $configurator) {
             $configurator($smarty, $this->config);
         }
 
         return $smarty;
+    }
+
+    /**
+     * Resolve the configured security policy, if any. Throws when the
+     * value names a class that doesn't exist or doesn't extend
+     * \Smarty\Security — silent fallback to "no security" is unsafe
+     * because the user assumes they're protected.
+     */
+    protected function resolveSecurityPolicy(Smarty $smarty): ?Security
+    {
+        $value = $this->config['security'] ?? null;
+
+        if ($value === null) {
+            return null;
+        }
+
+        $class = match ($value) {
+            'balanced' => BalancedSecurityPolicy::class,
+            'strict' => StrictSecurityPolicy::class,
+            default => $value,
+        };
+
+        if (! class_exists($class)) {
+            throw new InvalidArgumentException(
+                "Invalid smarty.security value: expected null, 'balanced', 'strict', "
+                ."or a class-string extending \\Smarty\\Security; got [{$value}]."
+            );
+        }
+
+        if (! is_subclass_of($class, Security::class) && $class !== Security::class) {
+            throw new InvalidArgumentException(
+                "Invalid smarty.security value: class [{$class}] must extend \\Smarty\\Security."
+            );
+        }
+
+        return new $class($smarty);
     }
 }

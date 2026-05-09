@@ -126,6 +126,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | `compile_check` | `true`                                         | Recheck template mtimes on every render. Disable in production for a small per-render win — at the cost of needing an explicit `smarty:clear-compiled` after a deploy. |
 | `default_modifiers` | `[]`                                       | Modifiers applied automatically to every `{$var}` output (e.g. `['strip']`). |
 | `error_reporting`| `null`                                        | `error_reporting()`-style bitmask Smarty applies while rendering. `null` leaves PHP's level untouched. |
+| `security`      | `null`                                         | Apply a `\Smarty\Security` policy. `null` (no security), `'balanced'`, `'strict'`, or a class-string extending `\Smarty\Security`. See [Security policy](#security-policy). |
 
 Both directories are created automatically via Laravel's `Filesystem::ensureDirectoryExists()` if missing.
 
@@ -147,10 +148,10 @@ class AppServiceProvider extends ServiceProvider
             $smarty->setAutoLiteral(false);
 
             // 2) Lock templates down with Smarty's security policy.
-            $policy = new \Smarty\Security($smarty);
-            $policy->php_modifiers = ['count'];
-            $policy->disabled_tags = ['php'];
-            $smarty->enableSecurity($policy);
+            //    Or use the shipped presets — see [Security policy](#security-policy).
+            $smarty->enableSecurity(
+                new \Vusys\LaravelSmarty\Security\BalancedSecurityPolicy($smarty),
+            );
 
             // 3) Register custom plugins next to the built-in ones.
             $smarty->registerPlugin(
@@ -170,6 +171,53 @@ class AppServiceProvider extends ServiceProvider
 The callback fires once per Smarty instance, after the curated config and built-in plugins have been applied — your code has the final say. The second argument is the resolved `smarty.*` config array, so you can branch on environment-specific values without re-reading `config()`.
 
 Why a service-provider hook and not a closure in `config/smarty.php`? Closures aren't serialisable, so they would silently break `php artisan config:cache`. A static `configure()` call from a service provider stays cache-safe.
+
+## Security policy
+
+Smarty templates can do a lot at runtime — raw `{php}` blocks, `{math equation=...}` (which `eval()`s its argument), `{fetch file=...}` (which reads files and URLs), `$_SERVER` / `$_GET` access, arbitrary static-class calls. For dev-authored templates that's fine. For anything where templates come from CMS admins, partners, or end users, those features are footguns.
+
+The package ships two `\Smarty\Security` subclasses you can opt into with one config line:
+
+| value      | class                                                              | use case |
+|------------|--------------------------------------------------------------------|----------|
+| `null`     | _no policy_                                                         | Default. Trusted, dev-authored templates only. |
+| `balanced` | `Vusys\LaravelSmarty\Security\BalancedSecurityPolicy`              | Admin-authored / CMS templates. Blocks `{php}`, `{math}`, super-globals, and arbitrary static-class access. Leaves modifiers and constants alone. |
+| `strict`   | `Vusys\LaravelSmarty\Security\StrictSecurityPolicy`                | User-submitted / multi-tenant templates. Inherits Balanced and additionally blocks `{fetch}` / `{eval}` / `{include_php}`, all constants, all stream wrappers, and switches modifiers to an explicit allow-list. |
+
+Enable in `config/smarty.php`:
+
+```php
+'security' => 'balanced',
+```
+
+Or wire a policy yourself via `SmartyFactory::configure()` if you need non-default tweaks:
+
+```php
+SmartyFactory::configure(function (\Smarty\Smarty $smarty) {
+    $policy = new \Vusys\LaravelSmarty\Security\StrictSecurityPolicy($smarty);
+    $policy->trusted_constants = ['APP_VERSION'];           // allow specific constants
+    $policy->allowed_modifiers[] = 'my_custom_modifier';    // append host-app modifiers
+    $smarty->enableSecurity($policy);
+});
+```
+
+**Subclassing.** Both shipped classes set everything as plain public properties, so you can subclass and override any single knob without touching the rest:
+
+```php
+class AppSecurityPolicy extends \Vusys\LaravelSmarty\Security\BalancedSecurityPolicy
+{
+    public $allow_constants = false;             // tighten this one default
+    public $trusted_constants = ['APP_VERSION']; // but allow this single constant
+}
+```
+
+Then point the config at it: `'security' => \App\Smarty\AppSecurityPolicy::class`.
+
+**Custom modifiers under Strict.** `StrictSecurityPolicy::$allowed_modifiers` ships with Smarty's built-in formatting modifiers plus the modifiers this package registers (`currency`, `trans`, `markdown`, etc.). If your app registers its own modifier, append it via subclassing — anything not on the list is rejected at render time with a `\Smarty\Exception`.
+
+**Invalid config values.** If the `'security'` key is a string that doesn't resolve to `'balanced'`, `'strict'`, or a class extending `\Smarty\Security`, the engine throws `InvalidArgumentException` at boot. Silent fallback to "no security" would be unsafe.
+
+**Out of scope (for now).** A dedicated logging channel for security violations (Laravel's default exception reporter already captures `\Smarty\Exception`); auto-invalidating the compile cache when the policy changes (clear `compile_path` after toggling); and a publishable subclass stub.
 
 ## Built-in plugins
 
