@@ -116,7 +116,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | `extension`     | `tpl`                                          | File extension registered as the highest-priority view extension. |
 | `compile_path`  | `storage_path('framework/smarty/compile')`     | Where Smarty writes compiled templates. |
 | `cache_path`    | `storage_path('framework/smarty/cache')`       | Where Smarty writes its output cache. |
-| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
+| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{signed_route}` / `{temporary_signed_route}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
 | `cache_lifetime`| `3600`                                         | Cache lifetime in seconds when `caching` is on. |
 | `force_compile` | `false`                                        | Recompile every render. Useful in development. |
 | `debugging`     | `false`                                        | Smarty's debug console. |
@@ -297,6 +297,10 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 | `{route name="posts.show" post=$post}` | `route('posts.show', ['post' => $post])` — every named param other than `name=` becomes a route parameter |
 | `{url path="/login"}` | `url('/login')` |
 | `{asset path="img/logo.svg"}` | `asset('img/logo.svg')` |
+| `{signed_route name="unsubscribe" user=$user->id}` | `URL::signedRoute('unsubscribe', ['user' => $user->id])` — same param convention as `{route}` |
+| `{temporary_signed_route name="download" expiration=3600 file=$file->id}` | `URL::temporarySignedRoute('download', 3600, ['file' => $file->id])` — `expiration=` accepts `int` seconds or any `DateTimeInterface` |
+
+Both signed-URL helpers are non-cacheable: a baked signature would either ship a stale URL on warm renders or, for the temporary variant, an already-expired link.
 
 ### Translation
 
