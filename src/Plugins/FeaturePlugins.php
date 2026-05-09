@@ -15,7 +15,7 @@ class FeaturePlugins
         // when it isn't installed so apps that don't use feature flags
         // aren't forced to pull it in — same shape as NumberPlugins'
         // Laravel-10 guard.
-        if (! class_exists(Feature::class)) {
+        if (! static::pennantInstalled()) {
             return;
         }
 
@@ -35,5 +35,10 @@ class FeaturePlugins
 
             return (string) $content;
         }, false);
+    }
+
+    protected static function pennantInstalled(): bool
+    {
+        return class_exists(Feature::class);
     }
 }

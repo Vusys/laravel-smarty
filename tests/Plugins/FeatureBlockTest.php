@@ -4,6 +4,8 @@ namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Laravel\Pennant\Feature;
 use Laravel\Pennant\PennantServiceProvider;
+use Smarty\Smarty;
+use Vusys\LaravelSmarty\Plugins\FeaturePlugins;
 use Vusys\LaravelSmarty\SmartyServiceProvider;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
@@ -66,5 +68,42 @@ class FeatureBlockTest extends TestCase
 
         $this->assertStringContainsString('[for-yes]', $allowedOutput);
         $this->assertStringNotContainsString('[for-yes]', $deniedOutput);
+    }
+
+    public function test_register_is_a_no_op_when_pennant_is_not_installed(): void
+    {
+        $smarty = new Smarty;
+
+        FeaturePluginsWithoutPennant::register($smarty);
+
+        $this->assertNull(
+            $smarty->getRegisteredPlugin(Smarty::PLUGIN_BLOCK, 'feature'),
+            'register() should leave the {feature} tag unregistered when Pennant is unavailable',
+        );
+    }
+
+    public function test_register_installs_block_plugin_when_pennant_is_installed(): void
+    {
+        $smarty = new Smarty;
+
+        FeaturePlugins::register($smarty);
+
+        $this->assertNotNull(
+            $smarty->getRegisteredPlugin(Smarty::PLUGIN_BLOCK, 'feature'),
+            'register() should install the {feature} block when Pennant is available',
+        );
+    }
+}
+
+/**
+ * Test seam: forces the Pennant-availability guard to false so the
+ * early-return branch in FeaturePlugins::register() is exercised even
+ * though laravel/pennant *is* installed in the dev environment.
+ */
+final class FeaturePluginsWithoutPennant extends FeaturePlugins
+{
+    protected static function pennantInstalled(): bool
+    {
+        return false;
     }
 }
