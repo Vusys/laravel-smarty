@@ -1,1 +1,1 @@
-status={$session.status}
+status={$session->status}

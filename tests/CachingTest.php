@@ -2,12 +2,12 @@
 
 namespace Vusys\LaravelSmarty\Tests;
 
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Vite;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\MessageBag;
@@ -107,6 +107,51 @@ class CachingTest extends TestCase
         Session::put('status', 'second');
         $second = view('shared_session_override')->render();
         $this->assertStringContainsString('status=second', $second);
+    }
+
+    public function test_auto_shared_auth_wrapper_re_evaluates_on_cache_hit(): void
+    {
+        // First render: guest. Wrapper is null; template hits the {else} arm.
+        $first = view('cache_auth_wrapper')->render();
+        $this->assertStringContainsString('guest', $first);
+        $this->assertStringNotContainsString('auth-id=', $first);
+
+        // Second render against the warm cache: now authed. Body must run.
+        $this->actingAs($this->stubUser(7));
+        $second = view('cache_auth_wrapper')->render();
+        $this->assertStringContainsString('auth-id=7', $second);
+        $this->assertStringNotContainsString('guest', $second);
+    }
+
+    public function test_auto_shared_request_wrapper_re_evaluates_on_cache_hit(): void
+    {
+        Route::get('/first', fn () => 'ok')->name('first');
+        Route::get('/second', fn () => 'ok')->name('second');
+
+        $this->get('/first');
+        $first = view('cache_request_wrapper')->render();
+        $this->assertStringContainsString('path=first', $first);
+
+        $this->get('/second');
+        $second = view('cache_request_wrapper')->render();
+        $this->assertStringContainsString('path=second', $second);
+    }
+
+    public function test_auto_shared_route_wrapper_re_evaluates_on_cache_hit(): void
+    {
+        Route::get('/home', fn () => 'ok')->name('home.index');
+
+        // First render: default root URL.
+        url()->forceRootUrl('http://first.test');
+        $first = view('cache_route_wrapper')->render();
+        $this->assertStringContainsString('url=http://first.test/home', $first);
+
+        // Mutate the URL generator's root URL. With $route nocache the
+        // second render emits the new host instead of the baked first
+        // one.
+        url()->forceRootUrl('http://second.test');
+        $second = view('cache_route_wrapper')->render();
+        $this->assertStringContainsString('url=http://second.test/home', $second);
     }
 
     public function test_can_and_cannot_blocks_re_evaluate_on_cache_hit(): void
@@ -246,43 +291,5 @@ class CachingTest extends TestCase
         $this->assertStringContainsString('<vite-2>', $second);
         $this->assertStringContainsString('<refresh-1>', $first);
         $this->assertStringContainsString('<refresh-2>', $second);
-    }
-
-    protected function stubUser(): Authenticatable
-    {
-        return new class implements Authenticatable
-        {
-            public function getAuthIdentifierName(): string
-            {
-                return 'id';
-            }
-
-            public function getAuthIdentifier(): int
-            {
-                return 1;
-            }
-
-            public function getAuthPasswordName(): string
-            {
-                return 'password';
-            }
-
-            public function getAuthPassword(): string
-            {
-                return '';
-            }
-
-            public function getRememberToken(): string
-            {
-                return '';
-            }
-
-            public function setRememberToken($v): void {}
-
-            public function getRememberTokenName(): string
-            {
-                return '';
-            }
-        };
     }
 }

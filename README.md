@@ -116,7 +116,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | `extension`     | `tpl`                                          | File extension registered as the highest-priority view extension. |
 | `compile_path`  | `storage_path('framework/smarty/compile')`     | Where Smarty writes compiled templates. |
 | `cache_path`    | `storage_path('framework/smarty/cache')`       | Where Smarty writes its output cache. |
-| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared `$session` array are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
+| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
 | `cache_lifetime`| `3600`                                         | Cache lifetime in seconds when `caching` is on. |
 | `force_compile` | `false`                                        | Recompile every render. Useful in development. |
 | `debugging`     | `false`                                        | Smarty's debug console. |
@@ -315,31 +315,75 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 ```smarty
 <title>{config key="app.name" default="My App"}</title>
 
-{if $session.status}
-  <div class="alert">{$session.status}</div>
+{if $session->has('status')}
+  <div class="alert">{$session->status}</div>
 {/if}
 
 <article>{$post->body|markdown nofilter}</article>
 ```
 
-The `$session` array is shared into every Smarty view automatically (it's `session()->all()` snapshotted at render time), so flash messages and other keys are available inside `{if ...}` without an extra step. If you'd rather pull a single value via the tag — handy when you want a default — assign it first:
-
-```smarty
-{session key="status" assign="status"}
-{if $status}<div class="alert">{$status}</div>{/if}
-```
+`$session` is one of four auto-shared wrapper objects — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects) for the full surface (`$auth`, `$request`, `$session`, `$route`).
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
 | `{config key="app.name" default=...}` | `config('app.name', $default)` |
 | `{session key="status" default=...}` | `session('status', $default)` |
 | `{session key="status" assign="status"}` | `$status = session('status')` (assigns instead of printing) |
-| `$session.status` (auto-shared) | `session('status')` |
+| `$session->status` (auto-shared, see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) | `session('status')` |
 | `\|markdown` modifier | `Illuminate\Support\Str::markdown($value)` — pair with `nofilter` to keep the rendered HTML, the same way you'd reach for Blade's `{!! !!}` |
 | `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
 | `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped |
 | `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts |
+
+## Auto-shared wrapper objects
+
+Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for output position — they emit straight to the template body and can't be used as a value (an `{include}` parameter, an `{if}` operand, an attribute expression). To plug that gap the package auto-shares four read-only wrapper objects on every render:
+
+| Variable | Wraps | Public surface |
+|----------|-------|----------------|
+| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
+| `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
+| `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
+| `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |
+
+```smarty
+{* Active nav state without controller plumbing *}
+<a class="{class array=['nav-item' => true, 'is-active' => $request->routeIs('feed.*')]}" href="{$route->to('feed.index')}">Home</a>
+
+{* Per-element auth checks (the {auth} block would shadow $user) *}
+{if $auth && $auth->id !== $post->user_id}
+  <button>Follow</button>
+{/if}
+
+{* Reusable partial — pass the URL as an include parameter *}
+{include file="partials/composer.tpl" action_url=$route->to('posts.replies.store', ['post' => $post->id])}
+
+{* Flash messages — has() works because $session is a real object, not an array *}
+{if $session->has('status')}
+  <div class="notification is-success">{$session->status}</div>
+{/if}
+```
+
+`{$var}` is auto-escaped under the package's default `escape_html=true` config — that applies to wrapper output too. No explicit `|escape` needed.
+
+### Reserved names
+
+`auth`, `request`, `session`, and `route` are reserved view-data keys. Passing one of them via `view('foo', ['auth' => …])` raises `Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable` rather than silently letting your data win. Rename the colliding view-data key.
+
+### `$auth` is null when no user is authenticated — by design
+
+Outside an `{auth}` block or `{if $auth}` guard, `{$auth->user->name}` raises `ErrorException: Attempt to read property "user" on null`. That's deliberate: silently rendering an empty string on guest is exactly the "I forgot the guest case" class of bug we want to surface during development. PHP 8.4 demotes "read property on null" to a warning, but Laravel's default error handler converts warnings to `ErrorException`, so the loud failure holds out of the box. Lower `smarty.error_reporting` if you want quieter output (and accept the trade-off).
+
+### `$auth->id` type caveat
+
+`$auth->id` is typed `mixed` because Laravel allows custom identifier types (typically `int|string`, occasionally UUID/object). The strict comparison in `{if $auth->id === $post->user_id}` — the canonical pattern — will quietly return false if the two sides differ in type (e.g. `int(42)` vs `string('42')`). If you query data from sources that don't preserve types (some JSON payloads, untyped session storage), cast on the way in or compare loosely.
+
+### Outside HTTP context (mail, queue, console)
+
+The wrappers are still auto-assigned but reflect Laravel's synthetic state: `$auth` is `null`, `$request->routeIs(…)` returns false, `$session->token()` is `null`, `$route->to(…)` still works (URL generation doesn't need a request). Templates that render in mail/queue contexts should treat all four as if they were guest/empty.
+
+`$session` also tolerates apps that don't bind a session store at all (stateless API workers, queue-only processes that strip session middleware, etc.) — `has()`, `get()`, `flashedKeys()` return false/default/empty rather than raising. The wrapper itself is always non-null; callers don't need to guard it.
 
 ## Pagination
 

@@ -9,10 +9,26 @@ use Smarty\CompilerException;
 use Smarty\Smarty;
 use Throwable;
 use Vusys\LaravelSmarty\Debug\SourceMap;
+use Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable;
+use Vusys\LaravelSmarty\Globals\Auth;
+use Vusys\LaravelSmarty\Globals\Request;
+use Vusys\LaravelSmarty\Globals\Route;
+use Vusys\LaravelSmarty\Globals\Session;
 use Vusys\LaravelSmarty\Plugins\BlockState;
 
 class SmartyEngine implements Engine
 {
+    /**
+     * Reserved template variable names — assigned automatically per
+     * render and not allowed to be overridden by view data. Each
+     * resolves to a small read-only wrapper under
+     * `Vusys\LaravelSmarty\Globals\` so templates can read
+     * request/auth/session state in any expression context.
+     *
+     * @var array<int, string>
+     */
+    private const RESERVED_VARIABLES = ['auth', 'request', 'session', 'route'];
+
     public function __construct(
         protected Smarty $smarty,
         protected Filesystem $files,
@@ -32,18 +48,27 @@ class SmartyEngine implements Engine
 
         $template = $this->smarty->createTemplate($this->files->basename($path), null, null, $this->smarty);
 
-        $autoShareSession = ! array_key_exists('session', $data) && app()->bound('session');
+        foreach (self::RESERVED_VARIABLES as $reserved) {
+            if (array_key_exists($reserved, $data)) {
+                throw ReservedTemplateVariable::for($reserved);
+            }
+        }
 
         foreach ($data as $key => $value) {
             $template->assign($key, $value);
         }
 
-        // Auto-shared $session is request-state, so mark it nocache: when
-        // smarty.caching is on, uses of {$session.status} compile into a
-        // {nocache} region instead of being baked into the cached output.
-        if ($autoShareSession) {
-            $template->assign('session', session()->all(), true);
-        }
+        // Auto-shared wrappers are request-state, so mark them nocache:
+        // when smarty.caching is on, uses of {$auth->id}, {$session->status}
+        // etc. compile into {nocache} regions instead of being baked into
+        // the cached output. $route is included even though URL generation
+        // looks deterministic — UrlGenerator::route() reads the current
+        // request's host/scheme, so a baked URL could be wrong on the next
+        // render under a different host (multi-tenant, X-Forwarded-Host).
+        $template->assign('auth', Auth::resolve(), true);
+        $template->assign('request', Request::make(), true);
+        $template->assign('session', Session::make(), true);
+        $template->assign('route', Route::make(), true);
 
         try {
             return $template->fetch();

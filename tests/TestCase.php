@@ -2,6 +2,7 @@
 
 namespace Vusys\LaravelSmarty\Tests;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Vusys\LaravelSmarty\SmartyServiceProvider;
@@ -37,5 +38,45 @@ abstract class TestCase extends OrchestraTestCase
         $app['config']->set('smarty.compile_path', $this->compilePath);
         $app['config']->set('smarty.cache_path', $this->cachePath);
         $app['config']->set('smarty.force_compile', true);
+    }
+
+    protected function stubUser(int $id = 1): Authenticatable
+    {
+        return new class($id) implements Authenticatable
+        {
+            public function __construct(private readonly int $id) {}
+
+            public function getAuthIdentifierName(): string
+            {
+                return 'id';
+            }
+
+            public function getAuthIdentifier(): int
+            {
+                return $this->id;
+            }
+
+            public function getAuthPasswordName(): string
+            {
+                return 'password';
+            }
+
+            public function getAuthPassword(): string
+            {
+                return '';
+            }
+
+            public function getRememberToken(): string
+            {
+                return '';
+            }
+
+            public function setRememberToken($v): void {}
+
+            public function getRememberTokenName(): string
+            {
+                return '';
+            }
+        };
     }
 }
