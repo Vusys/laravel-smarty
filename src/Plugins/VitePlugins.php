@@ -24,5 +24,31 @@ class VitePlugins
             static fn (): string => (string) resolve(Vite::class)->reactRefresh(),
             false,
         );
+
+        // Per-request value under strict CSP — must re-resolve on every
+        // render so warm-cache output doesn't ship a stale nonce.
+        $smarty->registerPlugin(
+            Smarty::PLUGIN_FUNCTION,
+            'csp_nonce',
+            static fn (): string => (string) resolve(Vite::class)->cspNonce(),
+            false,
+        );
+
+        // Vite's manifest is build-time, but the resolved URL still
+        // varies between hot mode and a built deployment. Stay non-
+        // cacheable for the same reason {vite} is.
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'vite_asset', static function (array $params): string {
+            $path = $params['path'] ?? '';
+            $buildDirectory = $params['build_directory'] ?? null;
+
+            return resolve(Vite::class)->asset($path, $buildDirectory);
+        }, false);
+
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'vite_content', static function (array $params): string {
+            $path = $params['path'] ?? '';
+            $buildDirectory = $params['build_directory'] ?? null;
+
+            return resolve(Vite::class)->content($path, $buildDirectory);
+        }, false);
     }
 }

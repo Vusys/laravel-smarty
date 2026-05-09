@@ -116,7 +116,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | `extension`     | `tpl`                                          | File extension registered as the highest-priority view extension. |
 | `compile_path`  | `storage_path('framework/smarty/compile')`     | Where Smarty writes compiled templates. |
 | `cache_path`    | `storage_path('framework/smarty/cache')`       | Where Smarty writes its output cache. |
-| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{signed_route}` / `{temporary_signed_route}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
+| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{signed_route}` / `{temporary_signed_route}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{csp_nonce}` / `{vite_asset}` / `{vite_content}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
 | `cache_lifetime`| `3600`                                         | Cache lifetime in seconds when `caching` is on. |
 | `force_compile` | `false`                                        | Recompile every render. Useful in development. |
 | `debugging`     | `false`                                        | Smarty's debug console. |
@@ -325,13 +325,25 @@ Both signed-URL helpers are non-cacheable: a baked signature would either ship a
 <head>
   {vite_react_refresh}
   {vite entrypoints=['resources/js/app.js']}
+  <script nonce="{csp_nonce}">window.__APP_CONFIG = {$config|json};</script>
 </head>
+
+{* Versioned URL for an asset that isn't part of an entrypoint *}
+<img src="{vite_asset path='resources/img/logo.svg'}" alt="">
+
+{* Inline SVG sprite (output is raw — function plugins aren't auto-escaped) *}
+{vite_content path="resources/img/sprite.svg"}
 ```
 
 | Tag | Equivalent |
 |-----|------------|
 | `{vite entrypoints=[...] build_directory=...}` | Blade's `@vite([...], $buildDirectory)` — `build_directory` is optional |
 | `{vite_react_refresh}` | Blade's `@viteReactRefresh` |
+| `{csp_nonce}` | `Vite::cspNonce()` — the per-request CSP nonce, empty string when none has been set |
+| `{vite_asset path="..." build_directory="..."}` | `Vite::asset($path, $buildDirectory)` — single versioned URL for an asset not declared as an entrypoint |
+| `{vite_content path="..." build_directory="..."}` | `Vite::content($path, $buildDirectory)` — file contents (e.g. for inline SVG sprites under hashed builds) |
+
+`{csp_nonce}`, `{vite_asset}`, and `{vite_content}` are all non-cacheable — the nonce changes per request, and asset URLs / contents change between hot mode and a built deployment.
 
 ### Conditional attributes
 
