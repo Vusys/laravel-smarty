@@ -14,6 +14,7 @@ class LaravelPlugins
         UrlPlugins::register($smarty);
         TranslationPlugins::register($smarty);
         AuthPlugins::register($smarty);
+        FeaturePlugins::register($smarty);
         HelperPlugins::register($smarty);
         VitePlugins::register($smarty);
         HtmlPlugins::register($smarty);
