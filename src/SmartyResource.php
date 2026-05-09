@@ -17,6 +17,13 @@ use Smarty\Template;
  * ViewCollector and any user-registered view composers — observe the full
  * template tree on every render, matching Blade's behavior.
  *
+ * Data composers add via `$view->with(...)` is transcribed onto the actual
+ * Smarty\Template after dispatch, so `View::composer($layoutName, ...)`
+ * produces Blade-equivalent semantics for `{extends}`-pulled layouts and
+ * `{include}`-d partials. Without that step the synthetic `View` we hand
+ * the dispatcher would accept the writes and then be garbage-collected,
+ * silently dropping the composer's data.
+ *
  * Driven by BridgedSmarty::doCreateTemplate(), which runs on every render
  * (the compile cache only short-circuits source loading, not template
  * instantiation).
@@ -44,6 +51,16 @@ class SmartyResource
 
         $this->events->dispatch('creating: '.$name, [$view]);
         $this->events->dispatch('composing: '.$name, [$view]);
+
+        // Transcribe data the listeners wrote via $view->with(...) onto the
+        // Template that's about to render. Without this hop, composer
+        // writes land on the synthetic $view above (never rendered) and
+        // disappear — diverging from Blade, where @extends-pulled
+        // layouts run through View::make() and composer data propagates
+        // naturally.
+        foreach ($view->getData() as $key => $value) {
+            $tpl->assign($key, $value);
+        }
     }
 
     protected function deriveViewName(Smarty $smarty, string $path): string
