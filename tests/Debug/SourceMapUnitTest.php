@@ -37,6 +37,14 @@ class SourceMapUnitTest extends TestCase
         $this->assertNull(SourceMap::lookup($this->tempDir.'/does-not-exist.tpl.php', 5));
     }
 
+    public function test_returns_null_when_compiled_file_is_empty(): void
+    {
+        $path = $this->tempDir.'/empty.tpl.php';
+        file_put_contents($path, '');
+
+        $this->assertNull(SourceMap::lookup($path, 1));
+    }
+
     public function test_returns_null_when_file_has_no_slf_header(): void
     {
         $path = $this->writeCompiledFile([

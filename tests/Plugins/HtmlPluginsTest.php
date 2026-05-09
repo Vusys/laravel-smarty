@@ -2,10 +2,24 @@
 
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
+use ReflectionMethod;
+use Vusys\LaravelSmarty\Plugins\HtmlPlugins;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class HtmlPluginsTest extends TestCase
 {
+    public function test_extract_array_returns_empty_when_param_is_not_array(): void
+    {
+        // Smarty templates can pass anything as `array=...`; if a caller
+        // accidentally hands in a scalar, we degrade silently to an empty
+        // class/style list rather than fatalling on a type error.
+        $method = new ReflectionMethod(HtmlPlugins::class, 'extractArray');
+
+        $this->assertSame([], $method->invoke(null, ['array' => 42]));
+        $this->assertSame([], $method->invoke(null, ['array' => 'not-an-array']));
+        $this->assertSame([], $method->invoke(null, []));
+    }
+
     public function test_class_emits_truthy_keys_only_and_style_emits_truthy_styles(): void
     {
         $output = view('html', [

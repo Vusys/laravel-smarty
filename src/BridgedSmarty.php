@@ -44,6 +44,11 @@ class BridgedSmarty extends Smarty
     public static function ensureCompilerInjectionAvailable(): void
     {
         $class = new ReflectionClass(Template::class);
+        // @codeCoverageIgnoreStart
+        // Reachable only if a future Smarty release renames or removes the
+        // private $compiler field on \Smarty\Template; on every supported
+        // Smarty 5.x the property is present, so the throw branch never
+        // executes against the vendored dependency.
         if (! $class->hasProperty('compiler')) {
             throw new RuntimeException(
                 'Smarty\\Template no longer declares a $compiler property; '.
@@ -51,6 +56,7 @@ class BridgedSmarty extends Smarty
                 'needs an update to track the new Smarty internals.'
             );
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**

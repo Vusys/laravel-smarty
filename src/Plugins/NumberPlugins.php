@@ -14,9 +14,14 @@ class NumberPlugins
         // Illuminate\Support\Number ships with Laravel 11+. Stay quiet on
         // Laravel 10 rather than fatalling — these modifiers simply don't
         // register. Users on L10 keep Smarty's native number_format.
+        // @codeCoverageIgnoreStart
+        // The early-return is L10-only; the coverage matrix runs on L13 where
+        // Number is always autoloaded, so this branch is provably unreachable
+        // under the coverage job.
         if (! class_exists(Number::class)) {
             return;
         }
+        // @codeCoverageIgnoreEnd
 
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,

@@ -37,6 +37,20 @@ class SmartyFactoryConfigTest extends TestCase
         $this->assertSame("Hello, World!\n", $output);
     }
 
+    public function test_error_reporting_is_passed_through_to_smarty(): void
+    {
+        // smarty.error_reporting is wired straight to Smarty::setErrorReporting,
+        // so a custom int (e.g. silencing E_USER_NOTICE that the lexer sometimes
+        // raises) round-trips onto the engine instance.
+        $this->app['config']->set('smarty.error_reporting', E_ALL & ~E_USER_NOTICE);
+
+        view('hello', ['name' => 'World'])->render();
+
+        $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
+
+        $this->assertSame(E_ALL & ~E_USER_NOTICE, $engine->smarty()->error_reporting);
+    }
+
     public function test_default_modifiers_apply_to_every_output(): void
     {
         $this->app['config']->set('smarty.escape_html', false);

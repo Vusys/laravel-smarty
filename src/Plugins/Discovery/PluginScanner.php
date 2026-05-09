@@ -222,9 +222,11 @@ class PluginScanner
             }
         }
 
+        // @codeCoverageIgnoreStart
         // Unreachable in any composer-installed Laravel app — Composer's
         // autoloader is what's loading this class right now. Fail loud
         // if we ever land here, so the misconfiguration surfaces at boot.
         throw new \RuntimeException('Composer ClassLoader not registered; cannot scan plugin namespaces.');
+        // @codeCoverageIgnoreEnd
     }
 }
