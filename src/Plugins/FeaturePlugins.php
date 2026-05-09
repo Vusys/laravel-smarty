@@ -38,11 +38,9 @@ class FeaturePlugins
             return (string) $content;
         }, false);
 
-        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'feature_active', static function (string $name, $for = null): bool {
-            return func_num_args() >= 2
-                ? Feature::for($for)->active($name)
-                : Feature::active($name);
-        }, false);
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'feature_active', static fn (string $name, $for = null): bool => func_num_args() >= 2
+            ? Feature::for($for)->active($name)
+            : Feature::active($name), false);
     }
 
     protected static function pennantInstalled(): bool

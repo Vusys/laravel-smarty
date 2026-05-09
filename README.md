@@ -263,6 +263,18 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 `{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. Inside `{auth}` the authenticated user is bound as `$user` for the duration of the block (any outer `$user` is restored on exit), so you can write `{$user->name|escape}` without passing the user via view data. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
 
+Both multi-ability blocks accept `inverse=true` for the negative arm — `{canany inverse=true}` renders when *none* of the abilities pass, `{canall inverse=true}` renders when *any* of them are missing. Empty `abilities=[]` fails closed in both arms (an accidental empty list never authorizes). For an `{else}`-style layout in a single decision, drop into `{if}` with the wrapper methods on `$auth`:
+
+```smarty
+{if $auth?->canAny(['update', 'delete'], $post)}
+  <a href="...">Manage</a>
+{else}
+  (no permissions)
+{/if}
+```
+
+`$auth->canAny(array $abilities, mixed $arguments = [])` and `$auth->canAll(array $abilities, mixed $arguments = [])` mirror the blocks (and apply the same fail-closed posture for an empty list). Use `?->` to keep guest renders safe — `$auth` is null for unauthenticated requests.
+
 ### Pennant feature flags
 
 Block tag for `Laravel\Pennant\Feature` — body short-circuits when the flag is off, matching Blade's `@feature`. Requires the optional `laravel/pennant` package; the tag silently no-ops when Pennant isn't installed.
@@ -447,7 +459,7 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 
 | Variable | Wraps | Public surface |
 |----------|-------|----------------|
-| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
+| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `canAny(array $abilities, $arguments = [])`, `canAll(array $abilities, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
 | `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
 | `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
 | `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |
