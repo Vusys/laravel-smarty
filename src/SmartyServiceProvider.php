@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty;
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
