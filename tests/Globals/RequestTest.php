@@ -32,6 +32,16 @@ class RequestTest extends TestCase
         $this->assertFalse($request->routeIs('anything.*'));
     }
 
+    public function test_route_returns_default_when_no_route_bound(): void
+    {
+        // Synthetic request — no route resolved (console / queue / mail
+        // context, or any render outside the routing dispatcher).
+        $request = new Request(HttpRequest::create('/nowhere'));
+
+        $this->assertNull($request->route('post'));
+        $this->assertSame('fallback', $request->route('post', 'fallback'));
+    }
+
     public function test_route_returns_route_parameter_or_null(): void
     {
         RouteFacade::get('/users/{username}', fn () => 'ok')->name('users.show');
