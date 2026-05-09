@@ -183,6 +183,19 @@ class SmartyFactoryConfigTest extends TestCase
         view('hello', ['name' => 'World'])->render();
     }
 
+    public function test_security_throws_for_non_string_value(): void
+    {
+        // bool / int / array etc. all fail the up-front is_string() guard
+        // with a friendly error rather than slipping through to a confusing
+        // class_exists() failure.
+        $this->app['config']->set('smarty.security', true);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/got \[bool\]/');
+
+        view('hello', ['name' => 'World'])->render();
+    }
+
     public function test_custom_block_plugin_loads_from_plugins_paths(): void
     {
         $files = new Filesystem;

@@ -20,7 +20,7 @@ class BalancedSecurityPolicyTest extends TestCase
     public function test_engine_has_balanced_policy_attached(): void
     {
         // Touch the view system so the engine is built lazily.
-        view('security_ok', ['name' => 'world', 'count' => 9])->render();
+        view('security_ok', ['name' => 'world'])->render();
 
         $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
 
@@ -71,7 +71,7 @@ class BalancedSecurityPolicyTest extends TestCase
 
     public function test_normal_templates_still_render(): void
     {
-        $output = view('security_ok', ['name' => 'world', 'count' => 9])->render();
+        $output = view('security_ok', ['name' => 'world'])->render();
 
         $this->assertStringContainsString('Hello, WORLD!', $output);
     }

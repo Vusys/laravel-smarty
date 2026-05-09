@@ -19,7 +19,7 @@ class StrictSecurityPolicyTest extends TestCase
 
     public function test_engine_has_strict_policy_attached(): void
     {
-        view('security_ok', ['name' => 'world', 'count' => 9])->render();
+        view('security_ok', ['name' => 'world'])->render();
 
         $engine = $this->app['view']->getEngineResolver()->resolve('smarty');
 
@@ -63,20 +63,27 @@ class StrictSecurityPolicyTest extends TestCase
     public function test_allowlisted_built_in_modifier_works(): void
     {
         // `upper` is on the allow-list — confirms allow-list isn't a blanket block.
-        $output = view('security_ok', ['name' => 'world', 'count' => 9])->render();
+        $output = view('security_ok', ['name' => 'world'])->render();
 
         $this->assertStringContainsString('Hello, WORLD!', $output);
     }
 
+    public function test_renamed_built_in_modifier_works(): void
+    {
+        // `wordwrap` is the real Smarty 5 name (not `word_wrap`). Locks the
+        // allow-list rename in so a future drift fails here, not in user code.
+        $output = view('security_strict_wordwrap', ['value' => 'one two three four'])->render();
+
+        $this->assertSame("one|two|three|four\n", $output);
+    }
+
     public function test_allowlisted_package_modifier_works(): void
     {
-        // `currency` is registered by NumberPlugins and must stay on the
+        // `markdown` is registered by HelperPlugins and must stay on the
         // allow-list — if it ever gets dropped, this test fails before users do.
-        $output = view('security_ok', ['name' => 'world', 'count' => 9])->render();
+        // Asserts real rendered output, not just absence of the modifier name.
+        $output = view('security_strict_package_modifier', ['content' => '**bold**'])->render();
 
-        // We don't pin the locale-specific currency formatting, just prove
-        // the modifier ran without being rejected.
-        $this->assertStringNotContainsString('|currency', $output);
-        $this->assertMatchesRegularExpression('/\d/', $output);
+        $this->assertStringContainsString('<strong>bold</strong>', $output);
     }
 }

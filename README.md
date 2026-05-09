@@ -182,7 +182,7 @@ The package ships two `\Smarty\Security` subclasses you can opt into with one co
 |------------|--------------------------------------------------------------------|----------|
 | `null`     | _no policy_                                                         | Default. Trusted, dev-authored templates only. |
 | `balanced` | `Vusys\LaravelSmarty\Security\BalancedSecurityPolicy`              | Admin-authored / CMS templates. Blocks `{php}`, `{math}`, super-globals, and arbitrary static-class access. Leaves modifiers and constants alone. |
-| `strict`   | `Vusys\LaravelSmarty\Security\StrictSecurityPolicy`                | User-submitted / multi-tenant templates. Inherits Balanced and additionally blocks `{fetch}` / `{eval}` / `{include_php}`, all constants, all stream wrappers, and switches modifiers to an explicit allow-list. |
+| `strict`   | `Vusys\LaravelSmarty\Security\StrictSecurityPolicy`                | User-submitted / multi-tenant templates. Inherits Balanced and additionally blocks `{fetch}` / `{eval}` / `{include_php}`, all constants, all stream wrappers, and switches modifiers to an explicit allow-list (Smarty 5's full default modifier set minus `regex_replace` for catastrophic-backtracking DoS, plus this package's own modifiers). |
 
 Enable in `config/smarty.php`:
 
@@ -215,7 +215,7 @@ Then point the config at it: `'security' => \App\Smarty\AppSecurityPolicy::class
 
 **Custom modifiers under Strict.** `StrictSecurityPolicy::$allowed_modifiers` ships with Smarty's built-in formatting modifiers plus the modifiers this package registers (`currency`, `trans`, `markdown`, etc.). If your app registers its own modifier, append it via subclassing — anything not on the list is rejected at render time with a `\Smarty\Exception`.
 
-**Invalid config values.** If the `'security'` key is a string that doesn't resolve to `'balanced'`, `'strict'`, or a class extending `\Smarty\Security`, the engine throws `InvalidArgumentException` at boot. Silent fallback to "no security" would be unsafe.
+**Invalid config values.** If the `'security'` key isn't `null`, `'balanced'`, `'strict'`, or a class extending `\Smarty\Security`, the engine throws `InvalidArgumentException` on the first view render. Silent fallback to "no security" would be unsafe — the user assumes they're protected. Non-string values (`true`, an array, etc.) and unknown class names both fail with a descriptive message.
 
 **Out of scope (for now).** A dedicated logging channel for security violations (Laravel's default exception reporter already captures `\Smarty\Exception`); auto-invalidating the compile cache when the policy changes (clear `compile_path` after toggling); and a publishable subclass stub.
 

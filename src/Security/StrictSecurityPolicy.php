@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Security;
 
+use Smarty\Smarty;
+
 /**
  * Hardened \Smarty\Security policy for templates authored by untrusted
  * parties — end users, partners, multi-tenant template editors.
@@ -26,26 +28,38 @@ namespace Vusys\LaravelSmarty\Security;
 class StrictSecurityPolicy extends BalancedSecurityPolicy
 {
     /**
-     * @var array<int, string>
+     * Tags Strict bans on top of whatever Balanced bans. Composed via the
+     * constructor so any future addition to Balanced is inherited rather
+     * than silently lost.
      */
-    public $disabled_tags = ['php', 'math', 'fetch', 'include_php', 'eval'];
+    public const ADDITIONAL_DISABLED_TAGS = ['fetch', 'include_php', 'eval'];
 
     /**
-     * Curated allow-list. The first block is Smarty 5's built-in
-     * formatting modifiers minus `regex_replace` (catastrophic-backtracking
-     * DoS surface; templates needing substitution should use `replace`).
-     * The second block is the modifiers this package itself registers via
-     * Plugins/* — they must stay in sync with that directory.
+     * Curated allow-list. Mirrors Smarty 5's full default modifier set —
+     * both the compiler-backed ones (Compile/Modifier/*) and the
+     * callback-backed ones (Extension\DefaultExtension::getModifierCallback)
+     * — minus `regex_replace` (catastrophic-backtracking DoS surface;
+     * templates needing substitution should use `replace`).
+     *
+     * The trailing block is the modifiers this package itself registers
+     * via Plugins/* — they must stay in sync with that directory or
+     * Strict templates will reject calls to first-party helpers.
      *
      * @var array<int, string>
      */
     public $allowed_modifiers = [
-        // Smarty 5 built-ins (Compile/Modifier/* + the date plugin):
+        // Smarty 5 compiler-backed built-ins (Compile/Modifier/*):
         'cat', 'count_characters', 'count_paragraphs', 'count_sentences',
         'count_words', 'default', 'empty', 'escape', 'from_charset', 'indent',
-        'is_array', 'isset', 'json_encode', 'lower', 'nl2br', 'no_print', 'raw',
+        'is_array', 'isset', 'json_encode', 'lower', 'nl2br', 'noprint', 'raw',
         'round', 'string_format', 'strip', 'strip_tags', 'strlen', 'str_repeat',
-        'substr', 'to_charset', 'unescape', 'upper', 'word_wrap', 'date_format',
+        'substr', 'to_charset', 'unescape', 'upper', 'wordwrap',
+
+        // Smarty 5 callback-backed built-ins (DefaultExtension::getModifierCallback):
+        'capitalize', 'count', 'date_format', 'debug_print_var', 'explode',
+        'implode', 'in_array', 'join', 'mb_wordwrap', 'number_format',
+        'replace', 'spacify', 'split', 'truncate',
+        // Deliberately NOT included: 'regex_replace' (DoS via catastrophic backtracking).
 
         // Package-shipped Laravel helpers (sync with src/Plugins/*):
         'currency', 'file_size', 'percentage', 'abbreviate', 'number_for_humans',
@@ -71,4 +85,11 @@ class StrictSecurityPolicy extends BalancedSecurityPolicy
      * @var int
      */
     public $max_template_nesting = 25;
+
+    public function __construct(Smarty $smarty)
+    {
+        parent::__construct($smarty);
+
+        $this->disabled_tags = array_merge($this->disabled_tags, self::ADDITIONAL_DISABLED_TAGS);
+    }
 }

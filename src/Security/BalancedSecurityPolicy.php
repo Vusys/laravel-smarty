@@ -21,6 +21,16 @@ use Smarty\Security;
 class BalancedSecurityPolicy extends Security
 {
     /**
+     * Sentinel entry for `$static_classes` — Smarty's documented
+     * `'none'` value is broken upstream (it ends up in
+     * `in_array($class, 'none')`, a PHP 8 TypeError). Using a non-empty
+     * array with one entry no real class can match has the same intent:
+     * the parser sees a non-empty list (so it gates access), and
+     * `in_array()` returns false for every real class.
+     */
+    public const DENY_ALL_STATIC_CLASSES_SENTINEL = '__laravel_smarty_deny_all__';
+
+    /**
      * `{php}` is a raw PHP block — the largest single RCE vector.
      * `{math}` evaluates its `equation` argument with `eval()` (see
      * Smarty's Math.php); even with input filtering, no admin needs that.
@@ -34,15 +44,9 @@ class BalancedSecurityPolicy extends Security
      * through controllers / view models. Specific classes can be opted
      * back in by subclassing and overriding `$static_classes`.
      *
-     * Smarty's documented `'none'` sentinel is broken upstream — it ends
-     * up in `in_array($class, 'none')` which is a PHP 8 TypeError. The
-     * non-empty array with a sentinel entry no real class can match
-     * achieves the same intent: the parser sees a non-empty list (so it
-     * gates access), and `in_array()` returns false for every real class.
-     *
      * @var array<int, string>
      */
-    public $static_classes = ['__laravel_smarty_deny_all__'];
+    public $static_classes = [self::DENY_ALL_STATIC_CLASSES_SENTINEL];
 
     /**
      * Templates should reach state via Laravel helpers (`request()`,

@@ -26,7 +26,7 @@ use Vusys\LaravelSmarty\Security\StrictSecurityPolicy;
  *     compile_check?: bool,
  *     default_modifiers?: list<string>|string,
  *     error_reporting?: int|null,
- *     security?: string|null,
+ *     security?: mixed,
  * }
  */
 class SmartyFactory
@@ -128,7 +128,9 @@ class SmartyFactory
      * Resolve the configured security policy, if any. Throws when the
      * value names a class that doesn't exist or doesn't extend
      * \Smarty\Security — silent fallback to "no security" is unsafe
-     * because the user assumes they're protected.
+     * because the user assumes they're protected. The throw fires the
+     * first time `make()` is called (i.e. on first view resolution),
+     * which in practice means the first render in any test or page hit.
      */
     protected function resolveSecurityPolicy(Smarty $smarty): ?Security
     {
@@ -136,6 +138,13 @@ class SmartyFactory
 
         if ($value === null) {
             return null;
+        }
+
+        if (! is_string($value)) {
+            throw new InvalidArgumentException(
+                "Invalid smarty.security value: expected null, 'balanced', 'strict', "
+                .'or a class-string extending \\Smarty\\Security; got ['.get_debug_type($value).'].'
+            );
         }
 
         $class = match ($value) {
