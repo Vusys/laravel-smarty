@@ -113,6 +113,12 @@ class SmartyFactory
 
         LaravelPlugins::register($smarty);
 
+        // Class-backed plugins (config + LaravelSmarty::discoverPluginsIn)
+        // run after the built-ins so a host-app plugin can deliberately
+        // shadow a built-in name if it really wants to. Collisions inside
+        // the discovered set throw — see PluginRegistrar.
+        LaravelSmarty::registerOn($smarty);
+
         if (($policy = $this->resolveSecurityPolicy($smarty)) instanceof Security) {
             $smarty->enableSecurity($policy);
         }

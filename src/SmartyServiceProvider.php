@@ -50,6 +50,8 @@ class SmartyServiceProvider extends ServiceProvider
                 Console\ClearCacheCommand::class,
                 Console\ClearCompiledCommand::class,
                 Console\OptimizeCommand::class,
+                Console\CachePluginsCommand::class,
+                Console\ClearPluginsCommand::class,
             ]);
         }
     }
