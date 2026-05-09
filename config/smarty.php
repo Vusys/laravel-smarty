@@ -80,11 +80,33 @@ return [
     | Plugins Directories
     |--------------------------------------------------------------------------
     |
-    | Additional directories to scan for custom Smarty plugins.
+    | Additional directories to scan for custom Smarty plugins. These are
+    | the canonical Smarty plugin paths — files named `function.<name>.php`,
+    | `modifier.<name>.php`, etc. The class-backed `plugin_namespaces` form
+    | below is *additional*, not a replacement.
     |
     */
 
     'plugins_paths' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Class-Backed Plugin Namespaces
+    |--------------------------------------------------------------------------
+    |
+    | PSR-4 namespaces scanned for class-backed plugins. Two registration
+    | styles are supported per class: a `#[SmartyPlugin]` attribute, or
+    | the `*Modifier` / `*Function` / `*Block` classname-suffix
+    | convention. Set to an empty array to disable namespace discovery
+    | (the manual `LaravelSmarty::registerPluginClass()` API still works).
+    | Third-party packages can add their own namespaces from a service
+    | provider's boot() via `LaravelSmarty::discoverPluginsIn(...)`.
+    |
+    */
+
+    'plugin_namespaces' => [
+        'App\\Smarty\\Plugins',
+    ],
 
     /*
     |--------------------------------------------------------------------------
