@@ -41,8 +41,14 @@ class BalancedSecurityPolicy extends Security
 
     /**
      * Forbid `\App\Models\User::find(...)` from templates. Forces data
-     * through controllers / view models. Specific classes can be opted
-     * back in by subclassing and overriding `$static_classes`.
+     * through controllers / view models.
+     *
+     * Subclassing: override to allow specific classes by *appending*,
+     * never by replacing with `[]` — an empty array is upstream-treated
+     * as "all classes trusted" via the `empty()` short-circuit in
+     * `isTrustedStaticClass()`. The shape to use is
+     * `[self::DENY_ALL_STATIC_CLASSES_SENTINEL, 'App\\Trusted']`, which
+     * gates access while letting the named class through.
      *
      * @var array<int, string>
      */

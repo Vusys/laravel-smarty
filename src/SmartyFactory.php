@@ -160,7 +160,7 @@ class SmartyFactory
             );
         }
 
-        if (! is_subclass_of($class, Security::class) && $class !== Security::class) {
+        if (! is_a($class, Security::class, true)) {
             throw new InvalidArgumentException(
                 "Invalid smarty.security value: class [{$class}] must extend \\Smarty\\Security."
             );

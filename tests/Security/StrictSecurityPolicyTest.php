@@ -44,6 +44,24 @@ class StrictSecurityPolicyTest extends TestCase
         view('security_fetch')->render();
     }
 
+    public function test_eval_tag_is_blocked(): void
+    {
+        $this->expectException(ViewException::class);
+        $this->expectExceptionMessageMatches('/eval.*not allowed|disabled/i');
+
+        view('security_eval', ['body' => 'hello'])->render();
+    }
+
+    public function test_stream_resource_is_blocked(): void
+    {
+        // streams=null means every stream wrapper (http/data/php/phar/...)
+        // is rejected when used as a resource type via {include 'foo:...'}.
+        $this->expectException(ViewException::class);
+        $this->expectExceptionMessageMatches("/stream 'data' not allowed/i");
+
+        view('security_stream')->render();
+    }
+
     public function test_constants_are_blocked(): void
     {
         $this->expectException(ViewException::class);

@@ -215,6 +215,10 @@ Then point the config at it: `'security' => \App\Smarty\AppSecurityPolicy::class
 
 **Custom modifiers under Strict.** `StrictSecurityPolicy::$allowed_modifiers` ships with Smarty's built-in formatting modifiers plus the modifiers this package registers (`currency`, `trans`, `markdown`, etc.). If your app registers its own modifier, append it via subclassing — anything not on the list is rejected at render time with a `\Smarty\Exception`.
 
+**`markdown` produces raw HTML.** The package's `markdown` modifier wraps `Str::markdown()` and emits unescaped tags (`<strong>`, `<a>`, …). The Strict policy's threat model is "trusted data, untrusted template" — it doesn't gate the *data* templates render. If your app passes user-controlled strings into a template that uses `{$x|markdown nofilter}`, that's still a stored-XSS surface. Drop `markdown` from `$allowed_modifiers` in a subclass if your data-trust profile demands it.
+
+**Toggling the policy after templates were already compiled.** Smarty caches compiled templates under `compile_path`. Switching `'security'` from `null` to `'strict'` does not invalidate previously compiled output, so the first render after a switch may still execute a template that was compiled with no policy attached. Run `php artisan smarty:clear-compiled` after changing the setting to be safe.
+
 **Invalid config values.** If the `'security'` key isn't `null`, `'balanced'`, `'strict'`, or a class extending `\Smarty\Security`, the engine throws `InvalidArgumentException` on the first view render. Silent fallback to "no security" would be unsafe — the user assumes they're protected. Non-string values (`true`, an array, etc.) and unknown class names both fail with a descriptive message.
 
 **Out of scope (for now).** A dedicated logging channel for security violations (Laravel's default exception reporter already captures `\Smarty\Exception`); auto-invalidating the compile cache when the policy changes (clear `compile_path` after toggling); and a publishable subclass stub.

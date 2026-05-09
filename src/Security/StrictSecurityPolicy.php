@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Security;
 
+use Smarty\Exception;
 use Smarty\Smarty;
 
 /**
@@ -24,6 +25,12 @@ use Smarty\Smarty;
  * Hosts that register their own modifiers must subclass and append to
  * `$allowed_modifiers` — anything not on the list is rejected at render
  * time with a `\Smarty\Exception`.
+ *
+ * Subclassing footgun: a `public $disabled_tags = ['my_block']` declaration
+ * shadows Balanced's defaults, and Strict's __construct only adds Strict's
+ * extras on top — the Balanced-level tags would silently be dropped. To
+ * extend rather than replace, override __construct and merge against
+ * `parent::$disabled_tags` after calling parent.
  */
 class StrictSecurityPolicy extends BalancedSecurityPolicy
 {
@@ -74,11 +81,6 @@ class StrictSecurityPolicy extends BalancedSecurityPolicy
     /**
      * @var array<int, string>
      */
-    public $streams = [];
-
-    /**
-     * @var array<int, string>
-     */
     public $trusted_uri = [];
 
     /**
@@ -91,5 +93,20 @@ class StrictSecurityPolicy extends BalancedSecurityPolicy
         parent::__construct($smarty);
 
         $this->disabled_tags = array_merge($this->disabled_tags, self::ADDITIONAL_DISABLED_TAGS);
+    }
+
+    /**
+     * Reject every stream wrapper outright — `http://`, `data://`,
+     * `php://`, `phar://`, etc. used as a resource type via
+     * `{include 'foo:...'}`. Overriding the method rather than nulling
+     * `$streams` keeps the property's PHPDoc covariant with vendor's
+     * upstream `@var array` and dodges Smarty's `empty([])` short-circuit
+     * that treats an empty array as "all trusted" instead of "none".
+     *
+     * @param  string  $stream_name
+     */
+    public function isTrustedStream($stream_name): bool
+    {
+        throw new Exception("stream '{$stream_name}' not allowed by security setting");
     }
 }
