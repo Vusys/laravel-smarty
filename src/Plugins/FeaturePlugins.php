@@ -26,7 +26,9 @@ class FeaturePlugins
                     ? Feature::for($params['for'])->active($name)
                     : Feature::active($name);
 
-                if (! $active) {
+                $inverse = (bool) ($params['inverse'] ?? false);
+
+                if ($active === $inverse) {
                     $repeat = false;
                 }
 
@@ -35,6 +37,10 @@ class FeaturePlugins
 
             return (string) $content;
         }, false);
+
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'feature_active', static fn (string $name, $for = null): bool => func_num_args() >= 2
+            ? Feature::for($for)->active($name)
+            : Feature::active($name), false);
     }
 
     protected static function pennantInstalled(): bool

@@ -102,6 +102,57 @@ class AuthTest extends TestCase
         $this->assertFalse($auth->can('compare', ['x', 'y']));
     }
 
+    public function test_can_any_passes_when_at_least_one_ability_passes(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        Gate::define('edit', fn () => false);
+        Gate::define('delete', fn ($user, $post) => $post->owner === 'me');
+
+        $auth = Auth::resolve();
+        $this->assertNotNull($auth);
+
+        $this->assertTrue($auth->canAny(['edit', 'delete'], (object) ['owner' => 'me']));
+        $this->assertFalse($auth->canAny(['edit', 'delete'], (object) ['owner' => 'someone-else']));
+    }
+
+    public function test_can_any_fails_closed_with_empty_abilities(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $auth = Auth::resolve();
+        $this->assertNotNull($auth);
+
+        $this->assertFalse($auth->canAny([]));
+    }
+
+    public function test_can_all_passes_only_when_every_ability_passes(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        Gate::define('edit', fn () => true);
+        Gate::define('delete', fn ($user, $post) => $post->owner === 'me');
+
+        $auth = Auth::resolve();
+        $this->assertNotNull($auth);
+
+        $this->assertTrue($auth->canAll(['edit', 'delete'], (object) ['owner' => 'me']));
+        $this->assertFalse($auth->canAll(['edit', 'delete'], (object) ['owner' => 'someone-else']));
+    }
+
+    public function test_can_all_fails_closed_with_empty_abilities(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $auth = Auth::resolve();
+        $this->assertNotNull($auth);
+
+        // Mathematically "for all x in [] check(x)" is vacuously true,
+        // but the wrapper mirrors the {canall} block's fail-closed
+        // posture — passing [] by mistake should never authorize.
+        $this->assertFalse($auth->canAll([]));
+    }
+
     public function test_guard_returns_null_when_named_guard_has_no_user(): void
     {
         $this->defineApiGuard();

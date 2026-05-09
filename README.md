@@ -116,7 +116,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | `extension`     | `tpl`                                          | File extension registered as the highest-priority view extension. |
 | `compile_path`  | `storage_path('framework/smarty/compile')`     | Where Smarty writes compiled templates. |
 | `cache_path`    | `storage_path('framework/smarty/cache')`       | Where Smarty writes its output cache. |
-| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{feature}` / `{signed_route}` / `{temporary_signed_route}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{csp_nonce}` / `{vite_asset}` / `{vite_content}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
+| `caching`       | `false`                                        | Toggles `Smarty::CACHING_LIFETIME_CURRENT`. Built-in request-coupled plugins (`{auth}` / `{guest}` / `{can}` / `{cannot}` / `{canany}` / `{canall}` / `{feature}` / `feature_active` / `{signed_route}` / `{temporary_signed_route}` / `{error}` / `{csrf_field}` / `{csrf_token}` / `{old}` / `{session}` / `{service}` / `{dump}` / `{dd}` / `{vite}` / `{vite_react_refresh}` / `{csp_nonce}` / `{vite_asset}` / `{vite_content}` / `{lang}` / `{lang_choice}`) and the auto-shared wrapper objects (`$auth`, `$request`, `$session`, `$route` — see [Auto-shared wrapper objects](#auto-shared-wrapper-objects)) are registered as non-cacheable, so they still re-evaluate per render on a warm cache. Wrap your own request-coupled tags in `{nocache}…{/nocache}` for the same guarantee. |
 | `cache_lifetime`| `3600`                                         | Cache lifetime in seconds when `caching` is on. |
 | `force_compile` | `false`                                        | Recompile every render. Useful in development. |
 | `debugging`     | `false`                                        | Smarty's debug console. |
@@ -263,6 +263,18 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 `{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. Inside `{auth}` the authenticated user is bound as `$user` for the duration of the block (any outer `$user` is restored on exit), so you can write `{$user->name|escape}` without passing the user via view data. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
 
+Both multi-ability blocks accept `inverse=true` for the negative arm — `{canany inverse=true}` renders when *none* of the abilities pass, `{canall inverse=true}` renders when *any* of them are missing. Empty `abilities=[]` fails closed in both arms (an accidental empty list never authorizes). For an `{else}`-style layout in a single decision, drop into `{if}` with the wrapper methods on `$auth`:
+
+```smarty
+{if $auth?->canAny(['update', 'delete'], $post)}
+  <a href="...">Manage</a>
+{else}
+  (no permissions)
+{/if}
+```
+
+`$auth->canAny(array $abilities, mixed $arguments = [])` and `$auth->canAll(array $abilities, mixed $arguments = [])` mirror the blocks (and apply the same fail-closed posture for an empty list). Use `?->` to keep guest renders safe — `$auth` is null for unauthenticated requests.
+
 ### Pennant feature flags
 
 Block tag for `Laravel\Pennant\Feature` — body short-circuits when the flag is off, matching Blade's `@feature`. Requires the optional `laravel/pennant` package; the tag silently no-ops when Pennant isn't installed.
@@ -278,6 +290,27 @@ Block tag for `Laravel\Pennant\Feature` — body short-circuits when the flag is
 ```
 
 `name=` is the flag identifier. `for=` (optional) scopes the check to a given subject — typically `$auth->user`, but anything Pennant accepts as a scope (a model, a string, a `Scope` instance) works. Without `for=`, Pennant uses its default scope.
+
+Pass `inverse=true` to render the body when the flag is *inactive* — useful for the "show legacy variant when flag is off" half of an A/B layout:
+
+```smarty
+{feature name="compact-composer" for=$auth->user}…compact composer…{/feature}
+{feature name="compact-composer" for=$auth->user inverse=true}…wide composer…{/feature}
+```
+
+For an `{else}`-style layout in a single decision, use the `feature_active(...)` modifier inside `{if}`:
+
+```smarty
+{if feature_active('compact-composer', $auth->user)}
+  …compact composer…
+{else}
+  …wide composer…
+{/if}
+```
+
+`feature_active($name, $for = null)` returns a bool. The optional second argument is the scope subject (same semantics as the block's `for=`).
+
+Scoped checks (`for=` or the modifier's second argument) need an explicit `{if $auth}` guard in templates that may render for guests, because Pennant's `for(null)` is undefined.
 
 ### Form helpers
 
@@ -426,7 +459,7 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
 
 | Variable | Wraps | Public surface |
 |----------|-------|----------------|
-| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
+| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `canAny(array $abilities, $arguments = [])`, `canAll(array $abilities, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
 | `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
 | `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
 | `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |

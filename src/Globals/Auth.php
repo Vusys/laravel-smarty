@@ -76,6 +76,30 @@ final class Auth
     }
 
     /**
+     * True when the user passes any of `$abilities` — same shape as
+     * the `{canany}` block. Returns false on an empty list, matching
+     * the block's fail-closed posture.
+     *
+     * @param  array<int, string>  $abilities
+     */
+    public function canAny(array $abilities, mixed $arguments = []): bool
+    {
+        return $abilities !== [] && Gate::forUser($this->user)->any($abilities, $arguments);
+    }
+
+    /**
+     * True when the user passes every ability in `$abilities` — same
+     * shape as the `{canall}` block. Returns false on an empty list,
+     * matching the block's fail-closed posture.
+     *
+     * @param  array<int, string>  $abilities
+     */
+    public function canAll(array $abilities, mixed $arguments = []): bool
+    {
+        return $abilities !== [] && Gate::forUser($this->user)->check($abilities, $arguments);
+    }
+
+    /**
      * Sub-wrapper bound to a non-default guard. Returns null when
      * that guard has no authenticated user, mirroring `resolve()`.
      */

@@ -88,4 +88,92 @@ class CanBlocksTest extends TestCase
         $this->assertStringContainsString('[done]', $output);
         $this->assertStringNotContainsString('B=', $output);
     }
+
+    public function test_canany_inverse_renders_only_when_all_abilities_deny(): void
+    {
+        $this->actingAs($this->stubUser());
+        Gate::define('edit-post', fn () => false);
+        Gate::define('delete-post', fn () => false);
+
+        $output = view('canany_inverse', ['post' => (object) ['owner' => 'me']])->render();
+
+        $this->assertStringContainsString('[canany-none]', $output);
+    }
+
+    public function test_canany_inverse_skips_when_any_ability_passes(): void
+    {
+        $this->actingAs($this->stubUser());
+        Gate::define('edit-post', fn ($user, $post) => $post->owner === 'me');
+        Gate::define('delete-post', fn () => false);
+
+        $output = view('canany_inverse', ['post' => (object) ['owner' => 'me']])->render();
+
+        $this->assertStringNotContainsString('[canany-none]', $output);
+    }
+
+    public function test_canall_inverse_renders_when_any_ability_denies(): void
+    {
+        $this->actingAs($this->stubUser());
+        Gate::define('edit-post', fn () => true);
+        Gate::define('delete-post', fn () => false);
+
+        $output = view('canall_inverse', ['post' => (object) ['owner' => 'me']])->render();
+
+        $this->assertStringContainsString('[canall-missing]', $output);
+    }
+
+    public function test_canall_inverse_skips_when_every_ability_passes(): void
+    {
+        $this->actingAs($this->stubUser());
+        Gate::define('edit-post', fn () => true);
+        Gate::define('delete-post', fn () => true);
+
+        $output = view('canall_inverse', ['post' => (object) ['owner' => 'me']])->render();
+
+        $this->assertStringNotContainsString('[canall-missing]', $output);
+    }
+
+    public function test_canany_inverse_does_not_evaluate_body_when_any_passes(): void
+    {
+        $this->actingAs($this->stubUser());
+        Gate::define('edit-post', fn () => true);
+        Gate::define('delete-post', fn () => false);
+
+        $output = view('canany_inverse_lazy')->render();
+
+        $this->assertStringContainsString('[done]', $output);
+        $this->assertStringNotContainsString('X=', $output);
+    }
+
+    public function test_canall_inverse_does_not_evaluate_body_when_all_pass(): void
+    {
+        $this->actingAs($this->stubUser());
+        Gate::define('edit-post', fn () => true);
+        Gate::define('delete-post', fn () => true);
+
+        $output = view('canall_inverse_lazy')->render();
+
+        $this->assertStringContainsString('[done]', $output);
+        $this->assertStringNotContainsString('Y=', $output);
+    }
+
+    public function test_canany_inverse_fails_closed_with_empty_abilities(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $output = view('canany_inverse_empty')->render();
+
+        $this->assertStringContainsString('[done]', $output);
+        $this->assertStringNotContainsString('[empty-canany]', $output);
+    }
+
+    public function test_canall_inverse_fails_closed_with_empty_abilities(): void
+    {
+        $this->actingAs($this->stubUser());
+
+        $output = view('canall_inverse_empty')->render();
+
+        $this->assertStringContainsString('[done]', $output);
+        $this->assertStringNotContainsString('[empty-canall]', $output);
+    }
 }

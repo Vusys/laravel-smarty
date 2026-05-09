@@ -77,8 +77,17 @@ class AuthPlugins
             if ($content === null) {
                 $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
                 $abilities = (array) ($params['abilities'] ?? []);
+                $inverse = (bool) ($params['inverse'] ?? false);
 
-                if (! Gate::any($abilities, $arguments)) {
+                // Empty abilities is a programming mistake and fails
+                // closed in both arms — see the same guard on {canall}.
+                if ($abilities === []) {
+                    $repeat = false;
+
+                    return '';
+                }
+
+                if (Gate::any($abilities, $arguments) === $inverse) {
                     $repeat = false;
                 }
 
@@ -92,8 +101,18 @@ class AuthPlugins
             if ($content === null) {
                 $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
                 $abilities = (array) ($params['abilities'] ?? []);
+                $inverse = (bool) ($params['inverse'] ?? false);
 
-                if ($abilities === [] || ! Gate::check($abilities, $arguments)) {
+                // Empty abilities is treated as a programming mistake and
+                // fails closed in both arms — passing [] by accident
+                // shouldn't suddenly render the inverse body to everyone.
+                if ($abilities === []) {
+                    $repeat = false;
+
+                    return '';
+                }
+
+                if (Gate::check($abilities, $arguments) === $inverse) {
                     $repeat = false;
                 }
 
