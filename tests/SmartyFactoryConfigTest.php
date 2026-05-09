@@ -3,6 +3,7 @@
 namespace Vusys\LaravelSmarty\Tests;
 
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\View\ViewException;
 use InvalidArgumentException;
 use Smarty\Security;
 use Smarty\Smarty;
@@ -178,7 +179,21 @@ class SmartyFactoryConfigTest extends TestCase
         $this->app['config']->set('smarty.security', \stdClass::class);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/must extend.*Smarty.*Security/i');
+        $this->expectExceptionMessageMatches('/must be a \*subclass\* of/i');
+
+        view('hello', ['name' => 'World'])->render();
+    }
+
+    public function test_security_throws_for_bare_smarty_security_class(): void
+    {
+        // The bare \Smarty\Security activates security mode but with all
+        // upstream defaults, which is more or less a no-op. Reject it
+        // explicitly so users don't think they're protected when they
+        // aren't.
+        $this->app['config']->set('smarty.security', Security::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/base class itself is too permissive/i');
 
         view('hello', ['name' => 'World'])->render();
     }
@@ -194,6 +209,63 @@ class SmartyFactoryConfigTest extends TestCase
         $this->expectExceptionMessageMatches('/got \[bool\]/');
 
         view('hello', ['name' => 'World'])->render();
+    }
+
+    public function test_compiled_template_survives_security_toggle(): void
+    {
+        // Documents the hazard called out in the README: toggling
+        // smarty.security after a template was already compiled does NOT
+        // re-compile the cached output, so the bypassed call is baked in
+        // until compile_path is cleared. This regression test pins the
+        // documented behaviour — if it ever changes (e.g. Smarty starts
+        // hashing the policy into the compile filename) we want to know.
+        $this->app['config']->set('smarty.force_compile', false);
+
+        $tpl = $this->viewsPath.'/security_toggle.tpl';
+        (new Filesystem)->put($tpl, '{$x|upper}'."\n");
+
+        try {
+            // First render: no security. Compiled bytecode contains the
+            // raw upper() call.
+            $first = view('security_toggle', ['x' => 'hi'])->render();
+            $this->assertSame("HI\n", $first);
+
+            // Now flip on Strict. Without clearing compile_path, the
+            // existing compiled file is reused.
+            $this->app['config']->set('smarty.security', 'strict');
+
+            // The render still succeeds because the policy gate only fires
+            // at compile time, not against already-compiled code. This
+            // *would* have been blocked if compiled fresh under Strict.
+            $second = view('security_toggle', ['x' => 'hi'])->render();
+            $this->assertSame("HI\n", $second);
+        } finally {
+            (new Filesystem)->delete($tpl);
+        }
+    }
+
+    public function test_strict_security_is_orthogonal_to_escape_html(): void
+    {
+        // Strict gates tags and modifiers at compile time; escape_html
+        // gates {$var} output through htmlspecialchars at render time.
+        // Confirm the two settings don't interfere — Strict still blocks
+        // {php} when escape is off, and a normal var renders raw.
+        $this->app['config']->set('smarty.escape_html', false);
+        $this->app['config']->set('smarty.security', 'strict');
+
+        $tpl = $this->viewsPath.'/security_no_escape.tpl';
+        (new Filesystem)->put($tpl, '{$payload}'."\n");
+
+        try {
+            $output = view('security_no_escape', ['payload' => '<b>raw</b>'])->render();
+            $this->assertSame("<b>raw</b>\n", $output);
+        } finally {
+            (new Filesystem)->delete($tpl);
+        }
+
+        // Same engine, different fixture: {php} is still rejected.
+        $this->expectException(ViewException::class);
+        view('security_php')->render();
     }
 
     public function test_custom_block_plugin_loads_from_plugins_paths(): void

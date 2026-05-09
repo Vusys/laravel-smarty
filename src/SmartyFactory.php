@@ -160,9 +160,16 @@ class SmartyFactory
             );
         }
 
-        if (! is_a($class, Security::class, true)) {
+        if ($class === Security::class || ! is_subclass_of($class, Security::class)) {
+            // The bare \Smarty\Security class is rejected — it activates
+            // "security mode" but ships maximally permissive defaults
+            // (no disabled tags, all super-globals, all static classes).
+            // Users who set it would think they're protected when they
+            // aren't meaningfully. Force a subclass.
             throw new InvalidArgumentException(
-                "Invalid smarty.security value: class [{$class}] must extend \\Smarty\\Security."
+                "Invalid smarty.security value: class [{$class}] must be a *subclass* of \\Smarty\\Security; "
+                .'the base class itself is too permissive to be useful as a policy. Extend '
+                .'BalancedSecurityPolicy or StrictSecurityPolicy, or write your own subclass.'
             );
         }
 

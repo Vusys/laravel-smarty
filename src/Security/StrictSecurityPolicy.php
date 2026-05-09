@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Vusys\LaravelSmarty\Security;
 
 use Smarty\Exception;
-use Smarty\Smarty;
 
 /**
  * Hardened \Smarty\Security policy for templates authored by untrusted
@@ -26,20 +25,25 @@ use Smarty\Smarty;
  * `$allowed_modifiers` — anything not on the list is rejected at render
  * time with a `\Smarty\Exception`.
  *
- * Subclassing footgun: a `public $disabled_tags = ['my_block']` declaration
- * shadows Balanced's defaults, and Strict's __construct only adds Strict's
- * extras on top — the Balanced-level tags would silently be dropped. To
- * extend rather than replace, override __construct and merge against
- * `parent::$disabled_tags` after calling parent.
+ * Subclassing: extend the deny-list by referencing the constants:
+ * `public $disabled_tags = [...parent::CORE_DISABLED_TAGS,
+ *  ...parent::ADDITIONAL_DISABLED_TAGS, 'my_block'];` — overriding the
+ * property with a bare list silently drops parent bans.
  */
 class StrictSecurityPolicy extends BalancedSecurityPolicy
 {
     /**
-     * Tags Strict bans on top of whatever Balanced bans. Composed via the
-     * constructor so any future addition to Balanced is inherited rather
-     * than silently lost.
+     * Tags Strict bans on top of Balanced's. Composed at class-load
+     * time via array spread in the property default below, so any
+     * future addition to BalancedSecurityPolicy::CORE_DISABLED_TAGS
+     * is inherited automatically.
      */
     public const ADDITIONAL_DISABLED_TAGS = ['fetch', 'include_php', 'eval'];
+
+    /**
+     * @var array<int, string>
+     */
+    public $disabled_tags = [...parent::CORE_DISABLED_TAGS, ...self::ADDITIONAL_DISABLED_TAGS];
 
     /**
      * Curated allow-list. Mirrors Smarty 5's full default modifier set —
@@ -87,13 +91,6 @@ class StrictSecurityPolicy extends BalancedSecurityPolicy
      * @var int
      */
     public $max_template_nesting = 25;
-
-    public function __construct(Smarty $smarty)
-    {
-        parent::__construct($smarty);
-
-        $this->disabled_tags = array_merge($this->disabled_tags, self::ADDITIONAL_DISABLED_TAGS);
-    }
 
     /**
      * Reject every stream wrapper outright — `http://`, `data://`,

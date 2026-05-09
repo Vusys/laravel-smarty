@@ -31,24 +31,33 @@ class BalancedSecurityPolicy extends Security
     public const DENY_ALL_STATIC_CLASSES_SENTINEL = '__laravel_smarty_deny_all__';
 
     /**
+     * Tags this policy bans. Lifted to a class constant so subclasses
+     * (notably {@see StrictSecurityPolicy}) can compose against the
+     * Balanced baseline at class-load time, not via a runtime
+     * `array_merge($this->disabled_tags, …)` that would silently drop
+     * Balanced bans if a user-subclass shadowed the property.
+     *
      * `{php}` is a raw PHP block — the largest single RCE vector.
      * `{math}` evaluates its `equation` argument with `eval()` (see
      * Smarty's Math.php); even with input filtering, no admin needs that.
-     *
+     */
+    public const CORE_DISABLED_TAGS = ['php', 'math'];
+
+    /**
      * @var array<int, string>
      */
-    public $disabled_tags = ['php', 'math'];
+    public $disabled_tags = self::CORE_DISABLED_TAGS;
 
     /**
      * Forbid `\App\Models\User::find(...)` from templates. Forces data
      * through controllers / view models.
      *
-     * Subclassing: override to allow specific classes by *appending*,
-     * never by replacing with `[]` — an empty array is upstream-treated
-     * as "all classes trusted" via the `empty()` short-circuit in
-     * `isTrustedStaticClass()`. The shape to use is
-     * `[self::DENY_ALL_STATIC_CLASSES_SENTINEL, 'App\\Trusted']`, which
-     * gates access while letting the named class through.
+     * Subclassing: override to allow specific classes by listing them
+     * directly (e.g. `['App\\Trusted']`) — the upstream `empty()`
+     * short-circuit in `isTrustedStaticClass()` only kicks in for an
+     * empty array, so any non-empty list works as an allow-list. The
+     * sentinel is only needed when you want pure deny-all and have no
+     * classes to allow; never override to `[]`.
      *
      * @var array<int, string>
      */
