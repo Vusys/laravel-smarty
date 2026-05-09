@@ -11,6 +11,7 @@ use Throwable;
 use Vusys\LaravelSmarty\Debug\SourceMap;
 use Vusys\LaravelSmarty\Exceptions\ReservedTemplateVariable;
 use Vusys\LaravelSmarty\Globals\Auth;
+use Vusys\LaravelSmarty\Globals\Errors;
 use Vusys\LaravelSmarty\Globals\Request;
 use Vusys\LaravelSmarty\Globals\Route;
 use Vusys\LaravelSmarty\Globals\Session;
@@ -27,7 +28,7 @@ class SmartyEngine implements Engine
      *
      * @var array<int, string>
      */
-    private const RESERVED_VARIABLES = ['auth', 'request', 'session', 'route'];
+    private const RESERVED_VARIABLES = ['auth', 'request', 'session', 'route', 'errors'];
 
     public function __construct(
         protected Smarty $smarty,
@@ -65,10 +66,13 @@ class SmartyEngine implements Engine
         // looks deterministic — UrlGenerator::route() reads the current
         // request's host/scheme, so a baked URL could be wrong on the next
         // render under a different host (multi-tenant, X-Forwarded-Host).
+        // $errors is request-state too — different requests carry different
+        // validation failures.
         $template->assign('auth', Auth::resolve(), true);
         $template->assign('request', Request::make(), true);
         $template->assign('session', Session::make(), true);
         $template->assign('route', Route::make(), true);
+        $template->assign('errors', Errors::make(), true);
 
         try {
             return $template->fetch();
