@@ -21,6 +21,27 @@
 
 Both directories are created automatically via Laravel's `Filesystem::ensureDirectoryExists()` if missing.
 
+### `force_compile` vs `compile_check`
+
+These two keys both control recompilation but kick in at different points:
+
+- **`compile_check=true`** (default): Smarty stat's the source `.tpl` on every render and recompiles only when the source is newer than the compiled output. Cheap when nothing's changed; correct when it has.
+- **`compile_check=false`**: skip the stat — trust whatever's already compiled. A small per-render win in production, on the assumption that deploys always run `php artisan smarty:clear-compiled` so the next render lazily recompiles.
+- **`force_compile=true`**: recompile on every render, no stat check. Useful in dev when you're editing a custom compiler, prefilter, or postfilter and need the changes to take effect without manually clearing the compile cache.
+
+Typical settings: `compile_check=true, force_compile=false` in dev (the defaults); `compile_check=false, force_compile=false` in production, with a `smarty:clear-compiled` in the deploy script.
+
+### `error_reporting` example
+
+A bitmask in PHP's `error_reporting()` format. Useful for muting notice-level warnings raised inside templates without changing the PHP-wide level:
+
+```php
+// config/smarty.php
+'error_reporting' => E_ALL & ~E_NOTICE & ~E_WARNING,
+```
+
+Smarty restores the previous level after each render, so the change is scoped to template execution.
+
 ## Customising Smarty further
 
 The keys above cover the common cases on purpose — this package is deliberately smaller-surface than wrapping every native Smarty option. For everything else (security policy, custom cache resource, registering your own plugins or filters, swapping the resource handler, tweaking obscure flags), register a configurator from a service provider's `boot()`:

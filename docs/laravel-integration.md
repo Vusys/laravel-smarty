@@ -12,6 +12,25 @@ View::composer('layouts.main', function ($view) {
 
 Data added by a composer via `$view->with(...)` (or `$view->withErrors(...)` etc.) is transcribed onto the actual sub-template before render, so the variables are visible inside `{extends}` layouts and `{include}` partials — same contract Blade gives. Both `composing:` and `creating:` listeners can mutate the View; either way the values reach the render scope. `View::share` precedence is unchanged: the global shared bag still feeds every render, with composer-added data layered on top (composer wins on key collision, matching Blade's `gatherData()` order).
 
+`withErrors()` works the same way — useful when a partial expects validation feedback even in routes where validation didn't run:
+
+```php
+// AppServiceProvider::boot()
+View::composer('partials.account-form', function ($view) {
+    $view->withErrors(session('errors', new \Illuminate\Support\ViewErrorBag));
+});
+```
+
+Inside the partial, `$errors` (the auto-shared wrapper) reflects whatever the composer set, so `{if $errors->has('email')}…{/if}` renders consistently across routes that did and didn't validate.
+
+A class-based composer is identical to Blade — point Laravel at any class with a `compose(View $view)` method:
+
+```php
+View::composer('layouts.shop', \App\Http\View\Composers\ShopComposer::class);
+```
+
+The composer is resolved through the container on every render, so constructor type-hints (an Eloquent repository, a domain service, etc.) auto-wire.
+
 ## Debug tooling
 
 `creating:` and `composing:` view events fire for every template Smarty loads — entries, `{extends}` parents, and `{include}` partials — so anything in the Laravel ecosystem that listens to those events sees the full render tree. Debugbar's **Views** tab, Telescope's **Views** watcher, and any other tool that hooks Laravel's view events should work without extra wiring, the same way they do for Blade.

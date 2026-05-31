@@ -19,6 +19,27 @@ Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for 
   <button>Follow</button>
 {/if}
 
+{* "Is the viewer the post's author?" — `is()` accepts a User and compares
+   via Laravel's `Authenticatable::is()`, so it works for any custom user model *}
+{if $auth?->is($post->user)}
+  <a href="{$route->to('posts.edit', ['post' => $post->id])}">Edit</a>
+{/if}
+
+{* Cross-guard check — `guard('api')` returns a fresh wrapper around the
+   named guard, or null when that guard has no user *}
+{if $auth?->guard('api')}
+  <span class="api-badge">API session active</span>
+{/if}
+
+{* Request-shape checks for nav highlighting / canonical URLs *}
+<link rel="canonical" href="{$request->fullUrl()|escape}">
+{if $request->is('admin/*')}<body class="is-admin">{else}<body>{/if}
+
+{* Read a query-string param with a default *}
+<form method="get">
+  <input name="q" value="{$request->input('q', '')|escape}">
+</form>
+
 {* Reusable partial — pass the URL as an include parameter *}
 {include file="partials/composer.tpl" action_url=$route->to('posts.replies.store', ['post' => $post->id])}
 

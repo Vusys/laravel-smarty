@@ -48,3 +48,25 @@ Then point the config at it: `'security' => \App\Smarty\AppSecurityPolicy::class
 **Invalid config values.** If the `'security'` key isn't `null`, `'balanced'`, `'strict'`, or a class extending `\Smarty\Security`, the engine throws `InvalidArgumentException` on the first view render. Silent fallback to "no security" would be unsafe — the user assumes they're protected. Non-string values (`true`, an array, etc.) and unknown class names both fail with a descriptive message.
 
 **Out of scope (for now).** A dedicated logging channel for security violations (Laravel's default exception reporter already captures `\Smarty\Exception`); auto-invalidating the compile cache when the policy changes (clear `compile_path` after toggling); and a publishable subclass stub.
+
+## Verifying a policy
+
+Policies are programmatically testable — instantiate one against a throwaway `Smarty` instance and render a template fragment that *should* be blocked. The render throws a `\Smarty\Exception` you can assert against:
+
+```php
+use Smarty\Smarty;
+use Vusys\LaravelSmarty\Security\StrictSecurityPolicy;
+
+$smarty = new Smarty;
+$smarty->setTemplateDir(__DIR__.'/fixtures');
+$smarty->enableSecurity(new StrictSecurityPolicy($smarty));
+
+try {
+    $smarty->fetch('eval://{fetch file="https://example.com"}');
+    throw new \LogicException('Policy did not block {fetch}');
+} catch (\Smarty\Exception $e) {
+    // expected — {fetch} is blocked under Strict
+}
+```
+
+The `eval://` resource lets you pass template source directly, so you don't need fixture files to assert against per-tag behaviour. The same approach works inside a phpunit/Pest test — useful when you've subclassed a policy and want to verify your tweaks didn't accidentally loosen something else.

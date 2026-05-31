@@ -5,9 +5,9 @@ Create `resources/views/welcome.tpl`:
 ```smarty
 <!doctype html>
 <html lang="en">
-<head><title>{$title|escape}</title></head>
+<head><title>{$title}</title></head>
 <body>
-  <h1>Hello, {$name|escape}!</h1>
+  <h1>Hello, {$name}!</h1>
 </body>
 </html>
 ```
@@ -22,6 +22,18 @@ Route::get('/', fn () => view('welcome', [
 ```
 
 Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.blade.php` for the same view name.
+
+### Output is auto-escaped by default
+
+`{$var}` is run through `htmlspecialchars()` automatically — same contract as Blade's `{{ }}` — so the examples above don't need an explicit `|escape`. That behaviour is controlled by `escape_html` (default `true`) in [Configuration](configuration.md).
+
+When you intentionally want raw HTML — Markdown output, a trusted fragment, etc. — chain `nofilter` (or use a modifier whose output is already safe HTML, paired with `nofilter`):
+
+```smarty
+<article>{$post->body|markdown nofilter}</article>
+```
+
+You can still write `|escape` explicitly; it's a no-op on already-escaped output, just harmless noise.
 
 ## Template inheritance
 
@@ -44,9 +56,11 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 {block name="content"}
   {foreach $posts as $post}
     <article>
-      <h2>{$post.title|escape}</h2>
-      <p>{$post.body|truncate:140:"…"|escape}</p>
+      <h2>{$post.title}</h2>
+      <p>{$post.body|truncate:140:"…"}</p>
     </article>
   {/foreach}
 {/block}
 ```
+
+View composers (`View::composer('layouts.main', …)`) fire for the parent layout as well as the child, so data attached to the layout via `$view->with(...)` is visible inside both `{block}` bodies and any `{include}`d partials. See [Laravel integration](laravel-integration.md#view-composers) for the contract.

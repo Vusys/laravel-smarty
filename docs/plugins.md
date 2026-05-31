@@ -50,6 +50,12 @@ Both multi-ability blocks accept `inverse=true` for the negative arm — `{canan
 
 `$auth->canAny(array $abilities, mixed $arguments = [])` and `$auth->canAll(array $abilities, mixed $arguments = [])` mirror the blocks (and apply the same fail-closed posture for an empty list). Use `?->` to keep guest renders safe — `$auth` is null for unauthenticated requests.
 
+`inverse=true` is **only** supported on `{canany}` / `{canall}` (and `{feature}`, see below) — there's no `{auth inverse=true}` because `{guest}` is the inverse of `{auth}`, and `{cannot}` is the inverse of `{can}`. The flag exists where a paired tag doesn't.
+
+### Block-state safety under exceptions
+
+`{auth}` (and `{error}` further down) bind a temporary variable on the open tag — `$user` for `{auth}`, `$message` for `{error}` — and restore the prior value on close. If the block body throws, the close phase never runs, which on a naive `static`-stack implementation would leak the binding into the next render. The package guards against this: `SmartyEngine::get()` calls `Vusys\LaravelSmarty\Plugins\BlockState::reset()` in a `finally` around every render, so leftover frames can't carry over. Matters especially under Octane / Swoole / RoadRunner, where the worker process (and any plugin-closure `static` state) survives across requests.
+
 ## Pennant feature flags
 
 Block tag for `Laravel\Pennant\Feature` — body short-circuits when the flag is off, matching Blade's `@feature`. Requires the optional `laravel/pennant` package; the tag silently no-ops when Pennant isn't installed.
@@ -205,13 +211,31 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 ## Misc helpers
 
 ```smarty
+{* Config values with a fallback *}
 <title>{config key="app.name" default="My App"}</title>
 
+{* Flash messages straight off the wrapper *}
 {if $session->has('status')}
   <div class="alert">{$session->status}</div>
 {/if}
 
+{* Or pull the value once via the tag and reuse — handy when the same value
+   feeds multiple places in the template *}
+{session key="status" assign="status"}
+{if isset($status)}
+  <div class="alert">{$status|escape}</div>
+{/if}
+
+{* Resolve a service out of the container and bind it for the rest of the
+   template. Useful for view-only pricing tables, formatters, etc. *}
+{service name="App\\Services\\PricingTable" assign="pricing"}
+<p>From {$pricing->headlinePrice()|currency:'GBP'}/month.</p>
+
+{* Render trusted Markdown to HTML — `nofilter` opts out of auto-escape *}
 <article>{$post->body|markdown nofilter}</article>
+
+{* JSON-encode for safe embedding inside a <script> *}
+<script>window.__APP_CONFIG = {$config|json};</script>
 ```
 
 `$session` is one of four auto-shared wrapper objects — see [Auto-shared wrapper objects](wrapper-objects.md) for the full surface (`$auth`, `$request`, `$session`, `$route`).
