@@ -49,7 +49,7 @@ jobs:
 
       - name: Pin matrix versions
         run: |
-          composer remove --dev --no-update larastan/larastan rector/rector driftingly/rector-laravel laravel/pint
+          composer remove --dev --no-update larastan/larastan rector/rector driftingly/rector-laravel laravel/pint infection/infection
           composer require --dev --no-update "laravel/framework:^${{ matrix.laravel }}" "orchestra/testbench:^${{ matrix.testbench }}"
 
       - name: Install dependencies

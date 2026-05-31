@@ -1,0 +1,142 @@
+name: Infection
+
+# Mutation testing — two modes:
+#
+# `pr` (PRs): runs in --git-diff-lines so only mutations on changed
+# lines are evaluated. Fast enough to gate PRs.
+#
+# `full` (master push + weekly + manual): full src/ run. Publishes the
+# MSI to the Stryker dashboard (feeds the README badge) when on master.
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a branch supersedes any in-flight mutation run on it.
+concurrency:
+  group: infection-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr:
+    name: Mutation testing (PR diff)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Infection's --git-diff-base needs the base branch fetched.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, intl
+          # pcov is dramatically faster than xdebug for coverage and
+          # Infection only needs line coverage, not full debug info.
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-infection-${{ hashFiles('composer.json') }}
+          restore-keys: composer-infection-
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run Infection (diff mode)
+        run: |
+          vendor/bin/infection \
+            --git-diff-lines \
+            --git-diff-base="origin/${{ github.base_ref }}" \
+            --logger-github \
+            --no-progress \
+            --no-interaction \
+            --threads=$(nproc)
+
+  full:
+    name: Mutation testing (full)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, intl
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-infection-${{ hashFiles('composer.json') }}
+          restore-keys: composer-infection-
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run Infection
+        run: |
+          vendor/bin/infection \
+            --logger-github \
+            --no-progress \
+            --no-interaction \
+            --threads=$(nproc)
+
+      - name: Upload Infection reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infection-reports-${{ github.run_id }}
+          path: build/infection/
+          retention-days: 14
+          if-no-files-found: warn
+
+      # Publish MSI to the Stryker dashboard (feeds the README badge).
+      # Best-effort: a dashboard hiccup must not fail the run, and the
+      # existing badge value survives a rejected PUT. No-ops cleanly
+      # when the API key secret is unset.
+      - name: Publish MSI to Stryker dashboard
+        if: ${{ github.ref == 'refs/heads/master' }}
+        continue-on-error: true
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+        run: |
+          if [ -z "$STRYKER_DASHBOARD_API_KEY" ]; then
+            echo "No Stryker API key configured; skipping dashboard publish."
+            exit 0
+          fi
+          MSI=$(php -r 'echo json_decode(file_get_contents("build/infection/infection.json"), true)["stats"]["msi"];')
+          echo "Publishing MSI=${MSI} to Stryker dashboard."
+          curl --silent --show-error --fail \
+            --request PUT \
+            --header "X-Api-Key: ${STRYKER_DASHBOARD_API_KEY}" \
+            --header "Content-Type: application/json" \
+            --data "{\"mutationScore\": ${MSI}}" \
+            "https://dashboard.stryker-mutator.io/api/reports/github.com/${GITHUB_REPOSITORY}/master"
