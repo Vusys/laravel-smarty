@@ -1,0 +1,92 @@
+name: Badges
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    # Needs write access to push the computed JSON files to the orphan
+    # `badges` branch. Other jobs in this repo keep `contents: read`
+    # because they don't mutate the repo; this one explicitly opts in.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, intl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-badges-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-badges-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests with JUnit log
+        run: vendor/bin/phpunit --log-junit junit.xml
+
+      - name: Compute matrix size from tests.yml
+        id: matrix
+        # tests.yml uses an `include:` list rather than flat php/laravel/db
+        # axes, so a length on `.include` *is* the cell count.
+        run: |
+          CELLS=$(yq '.jobs.test.strategy.matrix.include | length' .github/workflows/tests.yml)
+          echo "cells=$CELLS" >> "$GITHUB_OUTPUT"
+          echo "Matrix size: $CELLS configurations"
+
+      - name: Compute badge JSON
+        run: php .github/scripts/compute-badge-metrics.php junit.xml badges-out "${{ steps.matrix.outputs.cells }}"
+
+      - name: Publish to badges branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Stash the freshly generated JSONs out of the worktree so the
+          # branch switch below cannot disturb them.
+          mkdir -p /tmp/badge-staging
+          cp badges-out/*.json /tmp/badge-staging/
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin badges >/dev/null 2>&1; then
+            git fetch origin badges --depth=1
+            git checkout badges
+            rm -f ./*.json
+          else
+            # First run: create an orphan branch with no history. `git rm
+            # -rf .` clears the index/worktree of every file inherited from
+            # the source branch, leaving only the untracked staging in /tmp.
+            git checkout --orphan badges
+            git rm -rf . >/dev/null
+          fi
+
+          cp /tmp/badge-staging/*.json .
+          git add ./*.json
+
+          if git diff --cached --quiet; then
+            echo "Badges unchanged; nothing to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(badges): refresh metrics from ${GITHUB_SHA::7}"
+          git push -u origin badges
