@@ -59,16 +59,12 @@ final class Errors
      */
     public function all(?string $format = null): array
     {
-        return $format === null
-            ? $this->resolveBag()->all()
-            : $this->resolveBag()->all($format);
+        return $this->resolveBag()->all($format);
     }
 
     public function first(string $key = '*', ?string $format = null): string
     {
-        return $format === null
-            ? $this->resolveBag()->first($key)
-            : $this->resolveBag()->first($key, $format);
+        return $this->resolveBag()->first($key, $format);
     }
 
     /**
@@ -81,9 +77,7 @@ final class Errors
      */
     public function get(string $key, ?string $format = null): array
     {
-        return $format === null
-            ? $this->resolveBag()->get($key)
-            : $this->resolveBag()->get($key, $format);
+        return $this->resolveBag()->get($key, $format);
     }
 
     /**

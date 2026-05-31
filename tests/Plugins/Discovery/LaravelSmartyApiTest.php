@@ -49,6 +49,39 @@ class LaravelSmartyApiTest extends TestCase
         $this->assertSame(['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'], $namespaces);
     }
 
+    public function test_discover_plugins_in_adds_the_namespace_to_the_scanned_set(): void
+    {
+        LaravelSmarty::discoverPluginsIn('Acme\\Smarty\\Plugins');
+
+        $this->assertContains('Acme\\Smarty\\Plugins', LaravelSmarty::namespaces());
+    }
+
+    public function test_discover_plugins_in_continues_past_empty_entries_in_the_middle(): void
+    {
+        // The loop guard `continue`s past empties; a `break` would drop
+        // every namespace listed after the empty one.
+        LaravelSmarty::discoverPluginsIn('Acme\\First', '', 'Acme\\Second');
+
+        $namespaces = LaravelSmarty::namespaces();
+
+        $this->assertContains('Acme\\First', $namespaces);
+        $this->assertContains('Acme\\Second', $namespaces);
+    }
+
+    public function test_discover_plugins_in_deduplicates_repeated_namespaces(): void
+    {
+        // `namespaces()` runs `array_unique` at the surface, so the
+        // dedup guard inside `discoverPluginsIn` is only observable on
+        // the internal `$extraNamespaces` storage.
+        LaravelSmarty::discoverPluginsIn('Acme\\Smarty\\Plugins');
+        LaravelSmarty::discoverPluginsIn('Acme\\Smarty\\Plugins');
+
+        $reflection = new \ReflectionClass(LaravelSmarty::class);
+        $extras = $reflection->getProperty('extraNamespaces')->getValue();
+
+        $this->assertSame(['Acme\\Smarty\\Plugins'], $extras);
+    }
+
     public function test_rebuild_discovery_cache_writes_a_fresh_cache(): void
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/rebuild-cache/laravel-smarty-plugins.php';
