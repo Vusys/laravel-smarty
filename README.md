@@ -1,4 +1,4 @@
-# laravel-smarty
+# vusys/laravel-smarty
 
 [![Tests](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml/badge.svg)](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/Vusys/laravel-smarty/graph/badge.svg)](https://codecov.io/gh/Vusys/laravel-smarty)
