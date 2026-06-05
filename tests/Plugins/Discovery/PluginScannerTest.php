@@ -131,6 +131,42 @@ class PluginScannerTest extends TestCase
         $this->assertSame($baseline, PluginScanner::fingerprintInputs(['', '\\\\'], []));
     }
 
+    public function test_fingerprint_inputs_continues_past_empty_namespace_to_a_real_one(): void
+    {
+        // An empty entry must be skipped, not used as a terminator —
+        // a `break` would drop the real namespace that follows and
+        // produce the no-input fingerprint instead of the real one.
+        $real = 'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins';
+
+        $direct = PluginScanner::fingerprintInputs([$real], []);
+        $withEmptyFirst = PluginScanner::fingerprintInputs(['', $real], []);
+
+        $this->assertSame($direct, $withEmptyFirst);
+        $this->assertNotSame(
+            PluginScanner::fingerprintInputs([], []),
+            $withEmptyFirst,
+            'Real namespace must still contribute to the hash.',
+        );
+    }
+
+    public function test_fingerprint_inputs_continues_past_nonexistent_manual_class(): void
+    {
+        // A class_exists() miss must continue to the next manual entry
+        // — break would skip the real class and yield the empty-input
+        // fingerprint.
+        $baseline = PluginScanner::fingerprintInputs([], [SinceModifier::class]);
+        $withGhostFirst = PluginScanner::fingerprintInputs(
+            [],
+            ['App\\Does\\Not\\Exist', SinceModifier::class],
+        );
+
+        $this->assertSame($baseline, $withGhostFirst);
+        $this->assertNotSame(
+            PluginScanner::fingerprintInputs([], []),
+            $withGhostFirst,
+        );
+    }
+
     public function test_non_php_files_in_scanned_directory_are_ignored(): void
     {
         // tests/Fixtures/Plugins/notes.txt sits next to the plugin classes;

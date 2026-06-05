@@ -29,6 +29,19 @@ class BlockStateTest extends TestCase
         BlockState::reset();
     }
 
+    public function test_consecutive_pushes_stack_in_lifo_order(): void
+    {
+        // The `??=` guard initialises the stack only on first push;
+        // pop then unwinds in LIFO order. Replacing `??=` with `=` would
+        // wipe the prior entry on each push and we'd lose the bottom
+        // frame — pop()'ing twice would return null after the second.
+        BlockState::push('layer', 'bottom');
+        BlockState::push('layer', 'top');
+
+        $this->assertSame('top', BlockState::pop('layer'));
+        $this->assertSame('bottom', BlockState::pop('layer'));
+    }
+
     public function test_render_resets_block_state_after_clean_render(): void
     {
         BlockState::push('auth.user', 'leaked-from-elsewhere');

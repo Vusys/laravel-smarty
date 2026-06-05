@@ -139,7 +139,7 @@ class LaravelSmarty
     /**
      * @return array<int, class-string>
      */
-    public static function manualClasses(): array
+    protected static function manualClasses(): array
     {
         return array_values(array_unique(self::$manualClasses));
     }
@@ -147,7 +147,7 @@ class LaravelSmarty
     /**
      * @return array<int, PluginDescriptor>
      */
-    protected static function resolveDescriptors(): array
+    private static function resolveDescriptors(): array
     {
         if (self::$resolved !== null) {
             return self::$resolved;
