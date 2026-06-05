@@ -249,5 +249,5 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 | `\|markdown` modifier | `Illuminate\Support\Str::markdown($value)` — pair with `nofilter` to keep the rendered HTML, the same way you'd reach for Blade's `{!! !!}` |
 | `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
-| `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped |
-| `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts |
+| `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped. Gated to `local`/`testing`; silent no-op elsewhere |
+| `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts. Gated to `local`/`testing`; silent no-op elsewhere |

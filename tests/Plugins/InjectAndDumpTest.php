@@ -77,4 +77,43 @@ class InjectAndDumpTest extends TestCase
         $this->assertTrue($halted, '{dd} should reach the dumper and dd() should halt execution.');
         $this->assertSame(['bye'], $captured);
     }
+
+    public function test_dump_is_a_noop_outside_local_and_testing(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $captured = [];
+        VarDumper::setHandler(function ($var) use (&$captured) {
+            $captured[] = $var;
+        });
+
+        try {
+            $output = view('dump', ['payload' => ['hello' => 'world']])->render();
+        } finally {
+            VarDumper::setHandler(null);
+        }
+
+        $this->assertSame([], $captured, '{dump} must not reach the dumper outside local/testing.');
+        $this->assertStringNotContainsString('hello', $output);
+    }
+
+    public function test_dd_is_a_noop_outside_local_and_testing(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $reached = false;
+        VarDumper::setHandler(function () use (&$reached) {
+            $reached = true;
+            throw new \RuntimeException('dd-halt');
+        });
+
+        try {
+            $output = view('dd')->render();
+        } finally {
+            VarDumper::setHandler(null);
+        }
+
+        $this->assertFalse($reached, '{dd} must not reach the dumper or halt outside local/testing.');
+        $this->assertStringNotContainsString('bye', $output);
+    }
 }

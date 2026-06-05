@@ -37,7 +37,14 @@ class HelperPlugins
             return '';
         }, false);
 
+        // `dump` and `dd` are debugging aids — gated to local/testing so a
+        // stray `{dump}` left in a template can't leak internals or halt a
+        // production page. Outside those envs they're silent no-ops.
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'dump', static function (array $params): string {
+            if (! app()->environment('local', 'testing')) {
+                return '';
+            }
+
             foreach ($params as $value) {
                 dump($value);
             }
@@ -46,6 +53,10 @@ class HelperPlugins
         }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'dd', static function (array $params): string {
+            if (! app()->environment('local', 'testing')) {
+                return '';
+            }
+
             dd(...array_values($params));
         }, false);
     }
