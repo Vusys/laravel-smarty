@@ -88,6 +88,21 @@ class PluginCacheStoreTest extends TestCase
         $this->assertNotNull($loaded);
     }
 
+    public function test_load_is_manual_class_order_insensitive(): void
+    {
+        PluginCacheStore::store([], ['App\\A', 'App\\B'], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        // The sort() over manualClasses inside fingerprint() is what
+        // keeps a reordered manual list from invalidating the cache —
+        // dropping it would make store() and load() compute different
+        // fingerprints from the same logical set.
+        $loaded = PluginCacheStore::load([], ['App\\B', 'App\\A']);
+
+        $this->assertNotNull($loaded);
+    }
+
     public function test_load_returns_null_when_no_cache_file(): void
     {
         $this->assertNull(PluginCacheStore::load(['App\\Smarty\\Plugins'], []));

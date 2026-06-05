@@ -123,7 +123,7 @@ class SmartyEngine implements Engine
      * .tpl.php. Without walking previous() the wrapper's frames would be
      * the only ones we see and we'd fall back to entryPath/line 1.
      */
-    protected function remapException(Throwable $e, string $entryPath): Throwable
+    private function remapException(Throwable $e, string $entryPath): Throwable
     {
         // CompilerException already carries the source filename and line
         // (Smarty parses them from the lexer state); just attach the View

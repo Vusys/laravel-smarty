@@ -63,7 +63,7 @@ class SmartyResource
         }
     }
 
-    protected function deriveViewName(Smarty $smarty, string $path): string
+    private function deriveViewName(Smarty $smarty, string $path): string
     {
         $path = str_replace('\\', '/', $path);
 

@@ -154,6 +154,25 @@ class SourceMapUnitTest extends TestCase
         );
     }
 
+    public function test_resolves_marker_on_first_line_of_file(): void
+    {
+        // The SLM marker is on the very first line (index 0) and the
+        // error points at that same line. The descending loop must
+        // include i=0; an exclusive `$i > 0` bound would skip it and
+        // fall through to the "line 1" default, returning 1 instead
+        // of 42.
+        $path = $this->writeCompiledFile([
+            '/*__SLM:42*/ A;',
+            '/*__SLF:/abs/x/y.tpl*/',
+            'error here',
+        ]);
+
+        $this->assertSame(
+            ['path' => '/abs/x/y.tpl', 'line' => 42],
+            SourceMap::lookup($path, 1),
+        );
+    }
+
     public function test_uses_first_slf_header_when_multiple_present(): void
     {
         // Smarty's inheritance can produce a single compiled file

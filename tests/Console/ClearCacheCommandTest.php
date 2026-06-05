@@ -45,4 +45,52 @@ class ClearCacheCommandTest extends TestCase
         // both cached outputs vanish.
         $this->assertCount(1, $files->allFiles($this->cachePath));
     }
+
+    public function test_empty_file_option_still_clears_everything(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+        view('loop', ['items' => ['one']])->render();
+
+        $files = new Filesystem;
+        $this->assertCount(2, $files->allFiles($this->cachePath));
+
+        // Symfony parses `--file=` as an empty string. The guard
+        // `is_string($file) && $file !== ''` must fall through to
+        // clearAllCache(); flipping it to `||` would route an empty string
+        // into clearCache('') and clear nothing.
+        $this->artisan('smarty:clear-cache', ['--file' => ''])->assertSuccessful();
+
+        $this->assertEmpty($files->allFiles($this->cachePath));
+    }
+
+    public function test_expire_option_preserves_fresh_cache_entries(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+
+        $files = new Filesystem;
+        $this->assertCount(1, $files->allFiles($this->cachePath));
+
+        // Cache file was just written, so a 9999s expiry must spare it.
+        // Without the ternary picking the (int) branch, $expire would be
+        // null and the file would be cleared regardless.
+        $this->artisan('smarty:clear-cache', ['--expire' => '9999'])
+            ->expectsOutputToContain('Cleared 0 Smarty cache file(s).')
+            ->assertSuccessful();
+
+        $this->assertCount(1, $files->allFiles($this->cachePath));
+    }
+
+    public function test_expire_zero_clears_and_reports_count(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+
+        // expire=0 means "anything older than 0s" — clears the file and
+        // the success line interpolates the returned int. Without
+        // $this->info(...) the artisan output assertion below fails.
+        $this->artisan('smarty:clear-cache', ['--expire' => '0'])
+            ->expectsOutputToContain('Cleared 1 Smarty cache file(s).')
+            ->assertSuccessful();
+
+        $this->assertEmpty((new Filesystem)->allFiles($this->cachePath));
+    }
 }
