@@ -47,6 +47,14 @@ jobs:
           restore-keys: |
             composer-php${{ matrix.php }}-laravel${{ matrix.laravel }}-
 
+      - name: Allow installation of advisory-affected Laravel versions
+        # Composer's solver refuses to load packages with open security
+        # advisories. Older Laravel branches (10.x, 11.x ≤ 11.54) currently
+        # have advisories against every available version, so the matrix
+        # can't resolve at all. CI only — the published composer.json is
+        # untouched and end users still see the warnings.
+        run: composer config audit.block-insecure false
+
       - name: Pin matrix versions
         run: |
           composer remove --dev --no-update larastan/larastan rector/rector driftingly/rector-laravel laravel/pint infection/infection
