@@ -80,6 +80,25 @@ class ClearCacheCommandTest extends TestCase
         $this->assertCount(1, $files->allFiles($this->cachePath));
     }
 
+    public function test_compile_id_option_is_passed_through(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+        view('loop', ['items' => ['one']])->render();
+
+        $files = new Filesystem;
+        $this->assertCount(2, $files->allFiles($this->cachePath));
+
+        // --file scopes the clear; --compile-id narrows further. No cache
+        // was written under compile_id=nope, so 0 entries match. A Ternary
+        // mutant that swaps the compile_id for null would widen the clear
+        // to every compile_id for hello.tpl and remove one file.
+        $this->artisan('smarty:clear-cache', ['--file' => 'hello.tpl', '--compile-id' => 'nope'])
+            ->expectsOutputToContain('Cleared 0 Smarty cache file(s).')
+            ->assertSuccessful();
+
+        $this->assertCount(2, $files->allFiles($this->cachePath));
+    }
+
     public function test_expire_zero_clears_and_reports_count(): void
     {
         view('hello', ['name' => 'World'])->render();

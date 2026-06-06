@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Smarty\Smarty;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class SignedRoutePluginsTest extends TestCase
@@ -71,6 +72,26 @@ class SignedRoutePluginsTest extends TestCase
 
         $expected = URL::temporarySignedRoute('download', $expiresAt, ['file' => 7]);
         $this->assertStringContainsString('temp_dt='.$expected, $output);
+    }
+
+    public function test_signed_route_helpers_are_registered_uncached(): void
+    {
+        // Caching the rendered signature would either pin a stale URL or, for
+        // the temporary variant, ship an already-expired link — so both
+        // helpers must register with cacheable=false.
+        view('signed_routes', [
+            'userId' => 1,
+            'fileId' => 7,
+            'expiresAt' => Date::createFromTimestamp(2_000_000_000),
+        ])->render();
+
+        $smarty = $this->app['view']->getEngineResolver()->resolve('smarty')->smarty();
+
+        [, $signedCacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_FUNCTION, 'signed_route');
+        [, $tempCacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_FUNCTION, 'temporary_signed_route');
+
+        $this->assertFalse($signedCacheable);
+        $this->assertFalse($tempCacheable);
     }
 
     public function test_signed_url_round_trips_validation(): void

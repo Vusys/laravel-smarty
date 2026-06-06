@@ -3,6 +3,7 @@
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Illuminate\Support\Facades\Session;
+use Smarty\Smarty;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class CsrfPluginsTest extends TestCase
@@ -26,5 +27,22 @@ class CsrfPluginsTest extends TestCase
 
         $this->assertStringContainsString('<meta name="csrf-token" content="'.$token.'">', $output);
         $this->assertStringNotContainsString('<input', $output);
+    }
+
+    public function test_csrf_helpers_are_registered_uncached(): void
+    {
+        // CSRF tokens rotate per-session; caching the rendered field/meta
+        // would freeze the first request's token into the output cache
+        // and break form posts on subsequent renders. Both csrf helpers
+        // must register with cacheable=false.
+        Session::start();
+        view('csrf_field')->render();
+
+        $smarty = $this->app['view']->getEngineResolver()->resolve('smarty')->smarty();
+
+        foreach (['csrf_field', 'csrf_token'] as $name) {
+            [, $cacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_FUNCTION, $name);
+            $this->assertFalse($cacheable, "{{$name}} must register with cacheable=false");
+        }
     }
 }

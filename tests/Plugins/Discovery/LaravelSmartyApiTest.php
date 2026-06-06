@@ -6,6 +6,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class LaravelSmartyApiTest extends TestCase
@@ -33,6 +34,32 @@ class LaravelSmartyApiTest extends TestCase
         $app['config']->set('smarty.plugin_namespaces', [
             'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins',
         ]);
+    }
+
+    public function test_namespaces_merges_config_with_programmatic_registrations(): void
+    {
+        // `namespaces()` spreads config-supplied entries AND the
+        // discoverPluginsIn() store, then dedupes the union. A
+        // SpreadOneItem mutant on `...$config` would forward only the
+        // first config namespace; an UnwrapArrayValues mutant on the
+        // outer array_values would leave non-sequential int keys after
+        // the array_unique pass.
+        $this->app['config']->set('smarty.plugin_namespaces', [
+            'Acme\\Config\\First',
+            'Acme\\Config\\Second',
+            'Acme\\Config\\First', // duplicate that array_unique should collapse
+        ]);
+
+        LaravelSmarty::discoverPluginsIn('Acme\\Programmatic');
+
+        $this->assertSame(
+            [
+                'Acme\\Config\\First',
+                'Acme\\Config\\Second',
+                'Acme\\Programmatic',
+            ],
+            LaravelSmarty::namespaces(),
+        );
     }
 
     public function test_discover_plugins_in_silently_skips_empty_namespace_input(): void
@@ -82,6 +109,39 @@ class LaravelSmartyApiTest extends TestCase
         $this->assertSame(['Acme\\Smarty\\Plugins'], $extras);
     }
 
+    public function test_register_plugin_class_strips_a_leading_backslash(): void
+    {
+        // Callers sometimes pass `\\Foo\\Bar::class`-equivalent strings or
+        // copy-paste FQCNs with a leading separator. Without ltrim, the
+        // stored entry would carry the slash, and the in_array() dedupe
+        // would miss a subsequent canonical-form registration of the same
+        // class. Match the dedupe by registering both forms and verifying
+        // only the trimmed form survives.
+        LaravelSmarty::registerPluginClass('\\'.SinceModifier::class);
+        LaravelSmarty::registerPluginClass(SinceModifier::class);
+
+        $manual = (new \ReflectionClass(LaravelSmarty::class))
+            ->getProperty('manualClasses')
+            ->getValue();
+
+        $this->assertSame([SinceModifier::class], $manual);
+    }
+
+    public function test_manual_classes_deduplicates_repeated_registrations(): void
+    {
+        // Two registrations of the same class should resolve to a single
+        // descriptor on the Smarty instance; without array_unique inside
+        // manualClasses() the scanner would emit two descriptors and
+        // PluginRegistrar would raise a duplicate-name exception.
+        LaravelSmarty::registerPluginClass(SinceModifier::class);
+        LaravelSmarty::registerPluginClass(SinceModifier::class);
+
+        $reflection = new \ReflectionClass(LaravelSmarty::class);
+        $manualMethod = $reflection->getMethod('manualClasses');
+
+        $this->assertSame([SinceModifier::class], $manualMethod->invoke(null));
+    }
+
     public function test_rebuild_discovery_cache_writes_a_fresh_cache(): void
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/rebuild-cache/laravel-smarty-plugins.php';
@@ -124,6 +184,113 @@ class LaravelSmartyApiTest extends TestCase
             $rebuilt = require $cachePath;
             $this->assertNotSame('stale', $rebuilt['fingerprint']);
             $this->assertNotEmpty($rebuilt['plugins']);
+        } finally {
+            PluginCacheStore::$pathOverride = null;
+            @unlink($cachePath);
+        }
+    }
+
+    public function test_rebuild_discovery_cache_forces_a_rescan_even_when_a_matching_cache_exists(): void
+    {
+        $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/rebuild-rescan-cache/laravel-smarty-plugins.php';
+        @mkdir(dirname($cachePath), 0o755, true);
+        @unlink($cachePath);
+
+        PluginCacheStore::$pathOverride = $cachePath;
+
+        try {
+            // First, prime a valid cache file (right fingerprint over the
+            // current inputs) so we can then swap the plugin list inside it
+            // without breaking the load-side fingerprint check.
+            LaravelSmarty::rebuildDiscoveryCache();
+            /** @var array{fingerprint: string, plugins: array<int, array<string, string>>} $payload */
+            $payload = require $cachePath;
+
+            // Poison the cached plugins. If `rebuildDiscoveryCache()` skips
+            // clearing the file (mutant), the load path returns this
+            // synthetic list and `since` never makes it back into the
+            // result — the rescan is silently bypassed.
+            $payload['plugins'] = [[
+                'type' => 'modifier',
+                'name' => 'poison_should_be_evicted',
+                'class' => 'Synthetic\\NoSuchClass',
+            ]];
+            file_put_contents($cachePath, '<?php return '.var_export($payload, true).';'.PHP_EOL);
+
+            // Drop the in-memory memo so the file is the only source of
+            // descriptors going into the next call.
+            $reflection = new \ReflectionClass(LaravelSmarty::class);
+            $reflection->getProperty('resolved')->setValue(null, null);
+
+            $descriptors = LaravelSmarty::rebuildDiscoveryCache();
+            $names = array_map(static fn ($d) => $d->name, $descriptors);
+
+            $this->assertNotContains('poison_should_be_evicted', $names);
+            $this->assertContains('since', $names);
+        } finally {
+            PluginCacheStore::$pathOverride = null;
+            @unlink($cachePath);
+        }
+    }
+
+    public function test_flush_discovered_cache_removes_the_on_disk_cache_file(): void
+    {
+        $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/flush-cache/laravel-smarty-plugins.php';
+        @mkdir(dirname($cachePath), 0o755, true);
+        @unlink($cachePath);
+
+        PluginCacheStore::$pathOverride = $cachePath;
+
+        try {
+            LaravelSmarty::rebuildDiscoveryCache();
+            $this->assertFileExists($cachePath);
+
+            // flushDiscoveredCache's contract is "drop in-memory state and
+            // the on-disk cache" — and because it never calls
+            // resolveDescriptors afterward, store() never runs to overwrite
+            // the file. The clear() call is the only thing that removes it.
+            LaravelSmarty::flushDiscoveredCache();
+
+            $this->assertFileDoesNotExist($cachePath);
+        } finally {
+            PluginCacheStore::$pathOverride = null;
+            @unlink($cachePath);
+        }
+    }
+
+    public function test_resolve_descriptors_short_circuits_on_a_cache_hit_instead_of_rescanning(): void
+    {
+        $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/cache-hit-short-circuit/laravel-smarty-plugins.php';
+        @mkdir(dirname($cachePath), 0o755, true);
+        @unlink($cachePath);
+
+        PluginCacheStore::$pathOverride = $cachePath;
+
+        try {
+            // Seed a valid cache file, then poison its plugin list. Cache
+            // load only checks the fingerprint and entry shape, so the
+            // synthetic descriptor passes validation.
+            LaravelSmarty::rebuildDiscoveryCache();
+            /** @var array{fingerprint: string, plugins: array<int, array<string, string>>} $payload */
+            $payload = require $cachePath;
+            $payload['plugins'] = [[
+                'type' => 'modifier',
+                'name' => 'cache_hit_marker',
+                'class' => 'Synthetic\\NoSuchClass',
+            ]];
+            file_put_contents($cachePath, '<?php return '.var_export($payload, true).';'.PHP_EOL);
+
+            // Reach into `resolveDescriptors()` directly (and reset the
+            // memo) — if the cache-hit early-return is removed, we fall
+            // through to PluginScanner::scan, which would replace the
+            // synthetic entry with the real fixture set.
+            $reflection = new \ReflectionClass(LaravelSmarty::class);
+            $reflection->getProperty('resolved')->setValue(null, null);
+            $resolveMethod = $reflection->getMethod('resolveDescriptors');
+            $descriptors = $resolveMethod->invoke(null);
+
+            $names = array_map(static fn ($d) => $d->name, $descriptors);
+            $this->assertSame(['cache_hit_marker'], $names);
         } finally {
             PluginCacheStore::$pathOverride = null;
             @unlink($cachePath);
