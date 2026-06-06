@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-![Top Gear 'but I like this' meme captioned with Twig, Latte, and Smarty](../img/likethis.jpg)
+![Top Gear 'but I like this' meme captioned with Twig, Latte, and Smarty](img/likethis.jpg)
 
 Blade is the right answer for most Laravel apps, but a few situations push teams towards Smarty:
 
