@@ -141,7 +141,9 @@ class LaravelSmarty
      */
     private static function manualClasses(): array
     {
-        return array_values(array_unique(self::$manualClasses));
+        // `registerPluginClass` is the only writer and already in_array-dedupes
+        // after ltrim, so `$manualClasses` is always a packed, distinct list.
+        return self::$manualClasses;
     }
 
     /**

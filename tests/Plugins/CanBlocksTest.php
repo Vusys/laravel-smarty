@@ -54,7 +54,11 @@ class CanBlocksTest extends TestCase
     public function test_canall_renders_only_when_every_ability_passes(): void
     {
         $this->actingAs($this->stubUser());
-        Gate::define('edit-post', fn () => true);
+        // Tie at least one gate to the model so the canall plugin's
+        // `model=` pass-through must actually forward the post — a mutant
+        // that drops the model argument would either skip rendering (gate
+        // denies without context) or fail with "too few arguments".
+        Gate::define('edit-post', fn ($user, $post) => $post->owner === 'me');
         Gate::define('delete-post', fn () => true);
 
         $output = view('canall', ['post' => (object) ['owner' => 'me']])->render();

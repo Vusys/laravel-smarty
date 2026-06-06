@@ -137,6 +137,20 @@ class PluginScannerTest extends TestCase
         $this->assertNotContains('helper', $names);
     }
 
+    public function test_namespace_scan_accepts_a_leading_backslash(): void
+    {
+        // Config-supplied namespaces may arrive with a leading separator
+        // ("\\Acme\\Plugins"). classesIn() trims the slash before passing
+        // the prefix to Composer's PSR-4 resolver — without that trim,
+        // Composer's prefix table never matches and the scan finds
+        // nothing.
+        $descriptors = PluginScanner::scan(['\\Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'], []);
+
+        $names = array_map(static fn ($d) => $d->name, $descriptors);
+
+        $this->assertContains('since', $names);
+    }
+
     public function test_manually_registered_unrecognized_class_throws(): void
     {
         $this->expectException(PluginRegistrationException::class);

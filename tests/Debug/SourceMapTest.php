@@ -42,6 +42,11 @@ class SourceMapTest extends TestCase
         $this->assertSame($this->fixturePath('errors/runtime_simple.tpl'), $exception->getFile());
         $this->assertSame(2, $exception->getLine());
         $this->assertStringContainsString('(View: '.$this->fixturePath('errors/runtime_simple.tpl').')', $exception->getMessage());
+        // Lock the ViewException code/severity that the engine emits, so
+        // off-by-one mutants on those literals (code: 0, severity: 1) are
+        // caught by this golden-path mapping test.
+        $this->assertSame(0, $exception->getCode());
+        $this->assertSame(1, $exception->getSeverity());
     }
 
     public function test_error_inside_foreach_maps_to_tpl_line(): void
@@ -90,6 +95,11 @@ class SourceMapTest extends TestCase
         $this->assertInstanceOf(CompilerException::class, $exception->getPrevious());
         $this->assertSame($this->fixturePath('errors/compile_error.tpl'), $exception->getFile());
         $this->assertGreaterThan(1, $exception->getLine());
+        // Pin the (code=0, severity=1) shape on the CompilerException
+        // branch of remapException so off-by-one mutants on those
+        // literals are caught here as well as on the runtime path.
+        $this->assertSame(0, $exception->getCode());
+        $this->assertSame(1, $exception->getSeverity());
     }
 
     public function test_compile_error_in_included_partial_points_at_partial(): void

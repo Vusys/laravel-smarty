@@ -6,6 +6,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class LaravelSmartyApiTest extends TestCase
@@ -33,6 +34,32 @@ class LaravelSmartyApiTest extends TestCase
         $app['config']->set('smarty.plugin_namespaces', [
             'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins',
         ]);
+    }
+
+    public function test_namespaces_merges_config_with_programmatic_registrations(): void
+    {
+        // `namespaces()` spreads config-supplied entries AND the
+        // discoverPluginsIn() store, then dedupes the union. A
+        // SpreadOneItem mutant on `...$config` would forward only the
+        // first config namespace; an UnwrapArrayValues mutant on the
+        // outer array_values would leave non-sequential int keys after
+        // the array_unique pass.
+        $this->app['config']->set('smarty.plugin_namespaces', [
+            'Acme\\Config\\First',
+            'Acme\\Config\\Second',
+            'Acme\\Config\\First', // duplicate that array_unique should collapse
+        ]);
+
+        LaravelSmarty::discoverPluginsIn('Acme\\Programmatic');
+
+        $this->assertSame(
+            [
+                'Acme\\Config\\First',
+                'Acme\\Config\\Second',
+                'Acme\\Programmatic',
+            ],
+            LaravelSmarty::namespaces(),
+        );
     }
 
     public function test_discover_plugins_in_silently_skips_empty_namespace_input(): void
@@ -80,6 +107,39 @@ class LaravelSmartyApiTest extends TestCase
         $extras = $reflection->getProperty('extraNamespaces')->getValue();
 
         $this->assertSame(['Acme\\Smarty\\Plugins'], $extras);
+    }
+
+    public function test_register_plugin_class_strips_a_leading_backslash(): void
+    {
+        // Callers sometimes pass `\\Foo\\Bar::class`-equivalent strings or
+        // copy-paste FQCNs with a leading separator. Without ltrim, the
+        // stored entry would carry the slash, and the in_array() dedupe
+        // would miss a subsequent canonical-form registration of the same
+        // class. Match the dedupe by registering both forms and verifying
+        // only the trimmed form survives.
+        LaravelSmarty::registerPluginClass('\\'.SinceModifier::class);
+        LaravelSmarty::registerPluginClass(SinceModifier::class);
+
+        $manual = (new \ReflectionClass(LaravelSmarty::class))
+            ->getProperty('manualClasses')
+            ->getValue();
+
+        $this->assertSame([SinceModifier::class], $manual);
+    }
+
+    public function test_manual_classes_deduplicates_repeated_registrations(): void
+    {
+        // Two registrations of the same class should resolve to a single
+        // descriptor on the Smarty instance; without array_unique inside
+        // manualClasses() the scanner would emit two descriptors and
+        // PluginRegistrar would raise a duplicate-name exception.
+        LaravelSmarty::registerPluginClass(SinceModifier::class);
+        LaravelSmarty::registerPluginClass(SinceModifier::class);
+
+        $reflection = new \ReflectionClass(LaravelSmarty::class);
+        $manualMethod = $reflection->getMethod('manualClasses');
+
+        $this->assertSame([SinceModifier::class], $manualMethod->invoke(null));
     }
 
     public function test_rebuild_discovery_cache_writes_a_fresh_cache(): void
