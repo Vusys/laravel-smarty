@@ -10,10 +10,13 @@ use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\BadAttributeTypeModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AbstractBaseModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AttributeTaggedThing;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\CustomNamedModifier;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\EmptyNameModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\LoudFunction;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\MultiWordModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\PlainHelper;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\PrivateNamedModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\StaticNamedModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\WrapBlock;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
@@ -43,6 +46,37 @@ class PluginScannerTest extends TestCase
 
         $this->assertNotNull($descriptor);
         $this->assertSame('shouty', $descriptor->name);
+    }
+
+    public function test_private_name_property_is_ignored_in_favour_of_convention(): void
+    {
+        // The override contract is "public instance property with a literal
+        // default". A private $name must not leak as the plugin name —
+        // private state isn't a public API surface.
+        $descriptor = PluginScanner::resolveDescriptor(PrivateNamedModifier::class);
+
+        $this->assertNotNull($descriptor);
+        $this->assertSame('private_named', $descriptor->name);
+    }
+
+    public function test_static_name_property_is_ignored_in_favour_of_convention(): void
+    {
+        // Static $name is per-class, not per-instance; using it as the
+        // tag name would surprise callers who expected instance state.
+        $descriptor = PluginScanner::resolveDescriptor(StaticNamedModifier::class);
+
+        $this->assertNotNull($descriptor);
+        $this->assertSame('static_named', $descriptor->name);
+    }
+
+    public function test_empty_string_name_property_falls_back_to_convention(): void
+    {
+        // Registering with the empty string would be unusable — guard
+        // against treating $name = '' as a deliberate override.
+        $descriptor = PluginScanner::resolveDescriptor(EmptyNameModifier::class);
+
+        $this->assertNotNull($descriptor);
+        $this->assertSame('empty_name', $descriptor->name);
     }
 
     public function test_attribute_takes_precedence_over_classname_convention(): void

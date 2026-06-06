@@ -20,5 +20,9 @@ class LangChoiceTest extends TestCase
         $this->assertStringContainsString('modifier_zero=no apples', $output);
         $this->assertStringContainsString('modifier_many=5 apples', $output);
         $this->assertStringContainsString('modifier_named=3 pears', $output);
+        // {lang_choice} with no `count` defaults to 0, which picks the
+        // {0}-branch of the translation. Without the explicit default the
+        // helper would silently pluralise as "1 apple" instead.
+        $this->assertStringContainsString('function_default=no apples', $output);
     }
 }

@@ -40,6 +40,28 @@ class SmartyResourceUnitTest extends PHPUnitTestCase
         $resource->fireForTemplate($template);
     }
 
+    public function test_fire_for_template_short_circuits_when_source_itself_is_null(): void
+    {
+        // Template::getSource() is documented as ?Source — a null source
+        // would have us pass through to a method call on null without the
+        // null-safe operator. Test that path explicitly.
+        $events = $this->createMock(Dispatcher::class);
+        $events->expects($this->never())->method('dispatch');
+
+        $resource = new SmartyResource(
+            $this->createStub(Factory::class),
+            $events,
+            $this->createStub(Engine::class),
+            'tpl',
+        );
+
+        $smarty = new Smarty;
+        $template = $smarty->createTemplate('string:hello world');
+        $template->setSource(null);
+
+        $resource->fireForTemplate($template);
+    }
+
     public function test_derive_view_name_falls_back_to_basename_when_path_outside_template_dirs(): void
     {
         $resource = new SmartyResource(
@@ -82,6 +104,87 @@ class SmartyResourceUnitTest extends PHPUnitTestCase
         );
 
         $this->assertSame('admin.users', $name);
+    }
+
+    public function test_derive_view_name_normalises_backslashes_in_the_source_path(): void
+    {
+        // Windows paths arrive with '\\'. Without the normalize on the
+        // path side, the template-dir prefix check (which always works
+        // with '/') would fail to recognise its own directory and we'd
+        // fall through to basename(), losing the subdir structure.
+        $resource = new SmartyResource(
+            $this->createStub(Factory::class),
+            $this->createStub(Dispatcher::class),
+            $this->createStub(Engine::class),
+            'tpl',
+        );
+
+        $smarty = new Smarty;
+        $smarty->setTemplateDir(['/abs/views']);
+
+        $name = $this->invokeDeriveViewName(
+            $resource,
+            $smarty,
+            '/abs/views\\admin\\users.tpl',
+        );
+
+        $this->assertSame('admin.users', $name);
+    }
+
+    public function test_derive_view_name_normalises_backslashes_in_the_template_dir(): void
+    {
+        // Same normalize on the prefix side: a template-dir configured
+        // with backslashes (Windows-style) must still match a forward-
+        // slash path. Without the prefix-side str_replace, the prefix
+        // wouldn't appear in the normalised path and the prefix check
+        // would miss.
+        $resource = new SmartyResource(
+            $this->createStub(Factory::class),
+            $this->createStub(Dispatcher::class),
+            $this->createStub(Engine::class),
+            'tpl',
+        );
+
+        $smarty = new Smarty;
+        $smarty->setTemplateDir(['C:\\abs\\views']);
+
+        $name = $this->invokeDeriveViewName(
+            $resource,
+            $smarty,
+            'C:/abs/views/admin/users.tpl',
+        );
+
+        $this->assertSame('admin.users', $name);
+    }
+
+    public function test_logical_name_treats_regex_metacharacters_in_extension_literally(): void
+    {
+        // smarty.extension is user-configurable; if it ever contains
+        // regex metachars (here, a literal '.'), the strip pattern must
+        // treat them literally. Without preg_quote, '.' would match any
+        // char and the strip would fire on filenames that don't actually
+        // share the configured suffix.
+        $resource = new SmartyResource(
+            $this->createStub(Factory::class),
+            $this->createStub(Dispatcher::class),
+            $this->createStub(Engine::class),
+            'a.b',
+        );
+
+        $smarty = new Smarty;
+        $smarty->setTemplateDir(['/abs/views']);
+
+        $name = $this->invokeDeriveViewName(
+            $resource,
+            $smarty,
+            '/abs/views/admin/users.a-b',
+        );
+
+        // 'users.a-b' does NOT carry the configured '.a.b' suffix, so
+        // the strip must not fire. Without preg_quote, '\.a.b' would
+        // wildcard-match '.a-b' and we'd lose the '.a-b' suffix from
+        // the logical name.
+        $this->assertSame('admin.users.a-b', $name);
     }
 
     private function invokeDeriveViewName(SmartyResource $resource, Smarty $smarty, string $path): string

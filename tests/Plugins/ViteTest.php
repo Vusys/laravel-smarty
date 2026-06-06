@@ -6,6 +6,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Illuminate\Foundation\Vite;
 use Illuminate\Support\HtmlString;
+use Smarty\Smarty;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class ViteTest extends TestCase
@@ -92,6 +93,51 @@ class ViteTest extends TestCase
         // its output isn't auto-escaped — which is the point of the helper
         // (templates inline raw SVG markup directly into the document).
         $this->assertStringContainsString('content=<svg id="resources/img/sprite.svg"/>', $output);
+    }
+
+    public function test_vite_helpers_are_registered_uncached(): void
+    {
+        // Vite helpers resolve hot-mode vs build-manifest URLs, CSP nonces,
+        // and SVG content per-request — caching the rendered output would
+        // ship stale URLs/nonces across renders. Every Vite plugin must
+        // register with cacheable=false.
+        $fake = new class extends Vite
+        {
+            public function __invoke($entrypoints, $buildDirectory = null): HtmlString
+            {
+                return new HtmlString('');
+            }
+
+            public function reactRefresh(): HtmlString
+            {
+                return new HtmlString('');
+            }
+
+            public function cspNonce()
+            {
+                return '';
+            }
+
+            public function asset($asset, $buildDirectory = null): string
+            {
+                return '';
+            }
+
+            public function content($asset, $buildDirectory = null): string
+            {
+                return '';
+            }
+        };
+        $this->app->instance(Vite::class, $fake);
+
+        view('vite')->render();
+
+        $smarty = $this->app['view']->getEngineResolver()->resolve('smarty')->smarty();
+
+        foreach (['vite', 'vite_react_refresh', 'csp_nonce', 'vite_asset', 'vite_content'] as $name) {
+            [, $cacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_FUNCTION, $name);
+            $this->assertFalse($cacheable, "{{$name}} must register with cacheable=false");
+        }
     }
 
     public function test_csp_nonce_renders_empty_string_when_no_nonce_set(): void

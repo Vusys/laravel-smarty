@@ -77,7 +77,7 @@ class SmartyResource
         return $this->logicalName(basename($path));
     }
 
-    protected function logicalName(string $relative): string
+    private function logicalName(string $relative): string
     {
         $relative = preg_replace('/\.'.preg_quote($this->extension, '/').'$/', '', $relative) ?? $relative;
 

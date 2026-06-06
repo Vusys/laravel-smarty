@@ -182,6 +182,53 @@ class PluginCacheStoreTest extends TestCase
         $this->assertNull(PluginCacheStore::load($namespaces, []));
     }
 
+    public function test_load_returns_null_when_an_entry_type_is_not_a_string(): void
+    {
+        // Each per-entry shape check must reject on its own rule —
+        // type=int alone is enough to invalidate, even if name/class
+        // are valid strings. A weakened guard would fall through to
+        // PluginDescriptor::fromArray and either throw or build a bad
+        // descriptor instead of returning a clean null.
+        $namespaces = ['App\\X'];
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $valid = require $this->pluginCachePath;
+        $valid['plugins'] = [['type' => 42, 'name' => 'a', 'class' => 'App\\X']];
+        file_put_contents($this->pluginCachePath, '<?php return '.var_export($valid, true).';');
+
+        $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
+    public function test_load_returns_null_when_an_entry_name_is_not_a_string(): void
+    {
+        $namespaces = ['App\\X'];
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $valid = require $this->pluginCachePath;
+        $valid['plugins'] = [['type' => 'modifier', 'name' => 42, 'class' => 'App\\X']];
+        file_put_contents($this->pluginCachePath, '<?php return '.var_export($valid, true).';');
+
+        $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
+    public function test_load_returns_null_when_an_entry_class_is_not_a_string(): void
+    {
+        $namespaces = ['App\\X'];
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $valid = require $this->pluginCachePath;
+        $valid['plugins'] = [['type' => 'modifier', 'name' => 'a', 'class' => 42]];
+        file_put_contents($this->pluginCachePath, '<?php return '.var_export($valid, true).';');
+
+        $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
     public function test_load_returns_null_when_a_new_php_file_appears_in_a_scanned_namespace(): void
     {
         // Real namespace that resolves to disk so the file-content layer
