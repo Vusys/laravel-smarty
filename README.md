@@ -35,6 +35,14 @@ php artisan vendor:publish --tag=smarty-config
 
 That writes `config/smarty.php`.
 
+To customise the bundled paginator templates, publish them with:
+
+```bash
+php artisan vendor:publish --tag=smarty-pagination-views
+```
+
+That copies the `pagination::*` presets (Tailwind, Bootstrap 3/4/5, Semantic UI, and their simple variants) into `resources/views/vendor/pagination/`, where your edits override both the package's bundled `.tpl` and Laravel's framework Blade views. See [docs/pagination.md](docs/pagination.md) for details.
+
 ## Quick start
 
 Create `resources/views/welcome.tpl`:
