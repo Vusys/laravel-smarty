@@ -106,6 +106,23 @@ class FeatureBlockTest extends TestCase
         );
     }
 
+    public function test_feature_plugins_register_uncached(): void
+    {
+        // Feature-flag state is request-scoped (scope() resolutions, user
+        // auth, A/B variant overrides) — caching the rendered block or
+        // modifier output would pin the first request's flag value into
+        // the rendered cache. Both plugins must register cacheable=false.
+        $smarty = new Smarty;
+
+        FeaturePlugins::register($smarty);
+
+        [, $blockCacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_BLOCK, 'feature');
+        [, $modifierCacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_MODIFIER, 'feature_active');
+
+        $this->assertFalse($blockCacheable);
+        $this->assertFalse($modifierCacheable);
+    }
+
     public function test_feature_block_inverse_renders_when_flag_is_inactive(): void
     {
         Feature::define('on-flag', static fn () => true);

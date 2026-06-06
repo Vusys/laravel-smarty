@@ -4,6 +4,7 @@ namespace Vusys\LaravelSmarty\Tests;
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Filesystem\Filesystem;
+use Vusys\LaravelSmarty\SmartyServiceProvider;
 
 /**
  * Pin that a `resources/views/vendor/pagination/<preset>.tpl` published into
@@ -57,5 +58,28 @@ class PaginationVendorOverrideTest extends TestCase
 
         $rendered = $factory->make('pagination::bootstrap-5')->render();
         $this->assertStringContainsString('OVERRIDDEN BOOTSTRAP-5', $rendered);
+    }
+
+    public function test_smarty_pagination_views_publish_tag_maps_package_to_resources(): void
+    {
+        // `php artisan vendor:publish --tag=smarty-pagination-views` needs
+        // a real source=>destination mapping. An ArrayItem mutant that
+        // swaps the `=>` for a comparison operator would register the tag
+        // with a boolean entry that copies nothing. Assert the tag exists
+        // and its destination is under the host app's resources/views.
+        $paths = SmartyServiceProvider::pathsToPublish(
+            SmartyServiceProvider::class,
+            'smarty-pagination-views',
+        );
+
+        $this->assertNotEmpty($paths, 'smarty-pagination-views tag must register at least one path');
+
+        $destinations = array_values($paths);
+        $this->assertCount(1, $destinations);
+        $this->assertStringEndsWith('/resources/views/vendor/pagination', $destinations[0]);
+
+        $source = array_key_first($paths);
+        $this->assertIsString($source);
+        $this->assertStringEndsWith('/resources/views/pagination', $source);
     }
 }
