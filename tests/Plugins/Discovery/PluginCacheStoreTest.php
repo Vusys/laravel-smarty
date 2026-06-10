@@ -229,6 +229,81 @@ class PluginCacheStoreTest extends TestCase
         $this->assertNull(PluginCacheStore::load($namespaces, []));
     }
 
+    public function test_load_returns_null_on_unparseable_cache_file(): void
+    {
+        // A truncated write (pre-atomic-rename era) or hand-mangled file
+        // must surface as "stale cache → rescan", never as a ParseError
+        // bubbling into a 500.
+        file_put_contents($this->pluginCachePath, '<?php return [broken');
+
+        $this->assertNull(PluginCacheStore::load(['App\\X'], []));
+    }
+
+    public function test_load_returns_null_when_an_entry_type_is_an_unknown_string(): void
+    {
+        // 'gadget' is a string, so the is_string guard passes — the
+        // type-enum check must reject it here rather than letting
+        // PluginDescriptor::fromArray throw out of load().
+        $namespaces = ['App\\X'];
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $valid = require $this->pluginCachePath;
+        $valid['plugins'] = [['type' => 'gadget', 'name' => 'a', 'class' => 'App\\X', 'cacheable' => true]];
+        file_put_contents($this->pluginCachePath, '<?php return '.var_export($valid, true).';');
+
+        $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
+    public function test_load_returns_null_when_an_entry_lacks_the_cacheable_key(): void
+    {
+        // 0.21-era cache files predate the cacheable field; requiring it
+        // is the format-version check that forces a clean rescan after
+        // upgrade instead of silently defaulting every plugin.
+        $namespaces = ['App\\X'];
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $valid = require $this->pluginCachePath;
+        $valid['plugins'] = [['type' => 'modifier', 'name' => 'a', 'class' => 'App\\X']];
+        file_put_contents($this->pluginCachePath, '<?php return '.var_export($valid, true).';');
+
+        $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
+    public function test_round_trip_preserves_cacheable_flag(): void
+    {
+        $namespaces = ['App\\X'];
+
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('function', 'tick', 'App\\Tick', false),
+            new PluginDescriptor('modifier', 'since', 'App\\Since'),
+        ]);
+
+        $loaded = PluginCacheStore::load($namespaces, []);
+
+        $this->assertNotNull($loaded);
+        $this->assertFalse($loaded[0]->cacheable);
+        $this->assertTrue($loaded[1]->cacheable);
+    }
+
+    public function test_store_leaves_no_temp_files_behind(): void
+    {
+        // The atomic write goes through tempnam() + rename(); a failed
+        // cleanup would litter bootstrap/cache with orphaned temp files.
+        foreach (glob($this->pluginCacheDir.'/*') ?: [] as $file) {
+            @unlink($file);
+        }
+
+        PluginCacheStore::store([], [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $this->assertSame([$this->pluginCachePath], glob($this->pluginCacheDir.'/*'));
+    }
+
     public function test_load_returns_null_when_a_new_php_file_appears_in_a_scanned_namespace(): void
     {
         // Real namespace that resolves to disk so the file-content layer

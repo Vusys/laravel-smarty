@@ -5,6 +5,59 @@ All notable changes to this package are documented here. The format follows
 [semver](https://semver.org/) with the usual pre-1.0 caveat that minor
 releases may contain breaking changes (flagged below).
 
+## [Unreleased — 0.22.0]
+
+Caching-correctness release: everything request- or locale-coupled is now
+nocache, and the output cache finally has positive-control coverage.
+
+### Changed
+
+- **Locale-coupled modifiers re-evaluate on cache hits.** `|trans`,
+  `|trans_choice`, `|currency`, `|file_size`, `|percentage`,
+  `|abbreviate` and `|number_for_humans` now compile into `{nocache}`
+  regions under `smarty.caching`. Smarty silently ignores the
+  `cacheable` flag for *modifier* plugins (it only honours it for
+  function/block plugins), so the package ships a compile-time
+  `NocacheModifierCompiler` that marks the surrounding expression
+  nocache — previously one user's locale was baked into the shared
+  page cache.
+- **`{route}` / `{url}` / `{asset}` are nocache.** URL generation reads
+  the current request's host and scheme; a cached page could replay the
+  wrong host (multi-tenant domains, `X-Forwarded-Host`). Same reasoning
+  as the `$route` wrapper, which was already nocache.
+
+### Added
+
+- **`#[SmartyPlugin(cacheable: false)]`** — discovered plugins can now
+  declare request-coupled output. The flag rides through the descriptor
+  and the on-disk discovery cache into `registerPlugin()`; previously
+  every discovered plugin was registered cacheable and silently baked
+  into cached pages.
+- **Discovered function plugins receive `$template`**, so class-backed
+  function plugins can use the `assign=` idiom like the built-ins.
+  Existing plugins declaring only `(array $params)` keep working.
+
+### Fixed
+
+- **Atomic discovery-cache writes.** The plugin cache is written to a
+  temp file and `rename()`d into place; a concurrent request can no
+  longer `require` a half-written file and 500 with a ParseError. A
+  corrupt or schema-drifted cache file (including pre-0.22 formats) now
+  triggers a clean rescan instead of throwing.
+- **Overlapping plugin namespaces register cleanly.** Scanning
+  `App\Smarty` and `App\Smarty\Plugins` together reached the nested
+  classes twice and threw a duplicate-name exception citing the class
+  as its own duplicate; identical descriptors now dedupe (true
+  collisions still throw).
+
+### Upgrade notes
+
+- The on-disk plugin-discovery cache format changed; it invalidates and
+  rebuilds itself automatically on first load.
+- If a template relied on a cached `|currency`/`|trans` result staying
+  frozen across locale changes (unlikely but possible), that output now
+  tracks the live locale.
+
 ## [Unreleased — 0.21.0]
 
 Security release: output is now safe by default.

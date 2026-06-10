@@ -6,6 +6,7 @@ namespace Vusys\LaravelSmarty\Plugins;
 
 use Illuminate\Support\Number;
 use Smarty\Smarty;
+use Vusys\LaravelSmarty\Compile\NocacheModifiersExtension;
 
 class NumberPlugins
 {
@@ -23,6 +24,19 @@ class NumberPlugins
         }
         // @codeCoverageIgnoreEnd
 
+        // Number::* formats through the app's locale (Number::useLocale /
+        // per-request middleware), so the rendered strings are
+        // locale-coupled and must not be baked into the page cache.
+        // Smarty ignores the cacheable flag for modifiers (see
+        // NocacheModifierCompiler), so nocache comes from this extension;
+        // the flags below document intent. Registered inside the Number
+        // guard: providing a compiler for an unregistered modifier would
+        // turn Laravel 10's compile-time "unknown modifier" error into a
+        // runtime TypeError.
+        $smarty->addExtension(new NocacheModifiersExtension(
+            'currency', 'file_size', 'percentage', 'abbreviate', 'number_for_humans',
+        ));
+
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,
             'currency',
@@ -37,31 +51,36 @@ class NumberPlugins
                 }
 
                 return (string) Number::currency($value, $in, $locale, $precision);
-            }
+            },
+            false,
         );
 
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,
             'file_size',
-            static fn (int|float $bytes, int $precision = 0, ?int $maxPrecision = null): string => (string) Number::fileSize($bytes, $precision, $maxPrecision)
+            static fn (int|float $bytes, int $precision = 0, ?int $maxPrecision = null): string => (string) Number::fileSize($bytes, $precision, $maxPrecision),
+            false,
         );
 
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,
             'percentage',
-            static fn (int|float $value, int $precision = 0, ?int $maxPrecision = null, ?string $locale = null): string => (string) Number::percentage($value, $precision, $maxPrecision, $locale)
+            static fn (int|float $value, int $precision = 0, ?int $maxPrecision = null, ?string $locale = null): string => (string) Number::percentage($value, $precision, $maxPrecision, $locale),
+            false,
         );
 
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,
             'abbreviate',
-            static fn (int|float $value, int $precision = 0, ?int $maxPrecision = null): string => (string) Number::abbreviate($value, $precision, $maxPrecision)
+            static fn (int|float $value, int $precision = 0, ?int $maxPrecision = null): string => (string) Number::abbreviate($value, $precision, $maxPrecision),
+            false,
         );
 
         $smarty->registerPlugin(
             Smarty::PLUGIN_MODIFIER,
             'number_for_humans',
-            static fn (int|float $value, int $precision = 0, ?int $maxPrecision = null, bool $abbreviate = false): string => (string) Number::forHumans($value, $precision, $maxPrecision, $abbreviate)
+            static fn (int|float $value, int $precision = 0, ?int $maxPrecision = null, bool $abbreviate = false): string => (string) Number::forHumans($value, $precision, $maxPrecision, $abbreviate),
+            false,
         );
     }
 }

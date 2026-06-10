@@ -40,7 +40,13 @@ class PluginCacheStore
             return null;
         }
 
-        $payload = require $path;
+        try {
+            $payload = require $path;
+        } catch (\Throwable) {
+            // A truncated or hand-mangled cache file is a stale cache,
+            // not a fatal condition — rescan and rewrite.
+            return null;
+        }
 
         if (! is_array($payload) || ! isset($payload['fingerprint'], $payload['plugins'])) {
             return null;
@@ -56,11 +62,17 @@ class PluginCacheStore
 
         $descriptors = [];
         foreach ($payload['plugins'] as $entry) {
+            // The `cacheable` requirement also acts as the format-version
+            // check: 0.21-era cache files lack the key, fail here, and
+            // get rescanned into the current shape. The type-enum check
+            // keeps a schema-drifted entry from reaching fromArray()'s
+            // throw — an invalid cache is always "rescan", never a 500.
             if (! is_array($entry)
-                || ! isset($entry['type'], $entry['name'], $entry['class'])
-                || ! is_string($entry['type'])
+                || ! isset($entry['type'], $entry['name'], $entry['class'], $entry['cacheable'])
+                || ! in_array($entry['type'], ['modifier', 'function', 'block'], true)
                 || ! is_string($entry['name'])
                 || ! is_string($entry['class'])
+                || ! is_bool($entry['cacheable'])
             ) {
                 return null;
             }
@@ -69,6 +81,7 @@ class PluginCacheStore
                 'type' => $entry['type'],
                 'name' => $entry['name'],
                 'class' => $entry['class'],
+                'cacheable' => $entry['cacheable'],
             ]);
         }
 
@@ -98,7 +111,22 @@ class PluginCacheStore
             'plugins' => array_map(static fn (PluginDescriptor $descriptor): array => $descriptor->toArray(), $descriptors),
         ];
 
-        file_put_contents($path, '<?php return '.var_export($payload, true).';'.PHP_EOL);
+        // Write-to-temp + rename (Laravel's manifest pattern): a request
+        // that `require`s the file mid-write would otherwise hit a
+        // truncated PHP file and 500 with a ParseError. rename() within
+        // a directory is atomic, so readers see the old file or the new
+        // one — never a partial.
+        $temp = tempnam($directory, basename($path));
+        if ($temp === false) {
+            return;
+        }
+
+        file_put_contents($temp, '<?php return '.var_export($payload, true).';'.PHP_EOL);
+        @chmod($temp, 0o666 & ~umask());
+
+        if (! @rename($temp, $path)) {
+            @unlink($temp);
+        }
     }
 
     public static function clear(): void

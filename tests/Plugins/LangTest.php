@@ -4,6 +4,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Illuminate\Support\Facades\Lang;
 use Smarty\Smarty;
+use Vusys\LaravelSmarty\Compile\NocacheModifierCompiler;
 use Vusys\LaravelSmarty\Tests\TestCase;
 
 class LangTest extends TestCase
@@ -61,6 +62,25 @@ class LangTest extends TestCase
         foreach (['lang', 'lang_choice'] as $name) {
             [, $cacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_FUNCTION, $name);
             $this->assertFalse($cacheable, "{{$name}} must register with cacheable=false");
+        }
+    }
+
+    public function test_trans_modifiers_are_registered_nocache(): void
+    {
+        // Locale shifts per-request, same as {lang}. Smarty *ignores*
+        // the cacheable flag for modifiers, so the operative half of
+        // this contract is the NocacheModifierCompiler the extension
+        // provides — the flag assertion keeps introspection truthful.
+        $smarty = $this->app['view']->getEngineResolver()->resolve('smarty')->smarty();
+
+        foreach (['trans', 'trans_choice'] as $name) {
+            [, $cacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_MODIFIER, $name);
+            $this->assertFalse($cacheable, "|{$name} must register with cacheable=false");
+            $this->assertInstanceOf(
+                NocacheModifierCompiler::class,
+                $smarty->getModifierCompiler($name),
+                "|{$name} must compile through NocacheModifierCompiler — the registration flag alone does nothing for modifiers.",
+            );
         }
     }
 }

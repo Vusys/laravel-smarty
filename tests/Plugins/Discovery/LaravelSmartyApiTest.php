@@ -271,12 +271,13 @@ class LaravelSmartyApiTest extends TestCase
             // load only checks the fingerprint and entry shape, so the
             // synthetic descriptor passes validation.
             LaravelSmarty::rebuildDiscoveryCache();
-            /** @var array{fingerprint: string, plugins: array<int, array<string, string>>} $payload */
+            /** @var array{fingerprint: string, plugins: array<int, array<string, mixed>>} $payload */
             $payload = require $cachePath;
             $payload['plugins'] = [[
                 'type' => 'modifier',
                 'name' => 'cache_hit_marker',
                 'class' => 'Synthetic\\NoSuchClass',
+                'cacheable' => true,
             ]];
             file_put_contents($cachePath, '<?php return '.var_export($payload, true).';'.PHP_EOL);
 

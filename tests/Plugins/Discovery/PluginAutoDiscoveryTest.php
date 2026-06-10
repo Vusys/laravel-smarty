@@ -7,6 +7,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
+use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\AssigningFunction;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\CollidingSinceModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\StandaloneFunction;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\PlainHelper;
@@ -63,6 +64,35 @@ class PluginAutoDiscoveryTest extends TestCase
         $output = view('standalone')->render();
 
         $this->assertStringContainsString('out=standalone:hi', $output);
+    }
+
+    public function test_discovered_function_plugin_receives_template(): void
+    {
+        // PluginRegistrar forwards Smarty's $template argument, so a
+        // class-backed function plugin can use the assign= idiom like
+        // every comparable built-in ({session}, {service}).
+        LaravelSmarty::registerPluginClass(AssigningFunction::class);
+
+        $output = view('assigning')->render();
+
+        $this->assertStringContainsString('x=from-plugin', $output);
+    }
+
+    public function test_overlapping_namespaces_register_cleanly(): void
+    {
+        // Nested-prefix namespaces reach the Subdir classes twice; the
+        // scanner's dedupe keeps that from tripping the duplicate-name
+        // throw, and the plugins render normally.
+        config()->set('smarty.plugin_namespaces', [
+            'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins',
+            'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins\\Subdir',
+        ]);
+        LaravelSmarty::flushDiscoveredCache();
+
+        $output = view('discovery')->render();
+
+        $this->assertStringContainsString('nested=nest:x', $output);
+        $this->assertStringContainsString('since=[raw]', $output);
     }
 
     public function test_unrecognised_manually_registered_class_throws_at_render(): void
