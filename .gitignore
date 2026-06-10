@@ -4,3 +4,6 @@
 /.phpunit.result.cache
 /build
 /site
+/.claude
+/cache
+/templates_c
