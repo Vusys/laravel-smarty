@@ -36,6 +36,23 @@ class ErrorBlockTest extends TestCase
         $this->assertSame("[start][end]\n", $output);
     }
 
+    public function test_error_block_reads_a_named_bag(): void
+    {
+        // Blade's @error('email', 'login') — multi-form pages flash
+        // each form's failures into its own bag. The default-bag block
+        // must not see the named bag's errors, and vice versa.
+        Session::start();
+        $errors = (new ViewErrorBag)->put('login', new MessageBag([
+            'email' => ['login-email-error'],
+        ]));
+        Session::put('errors', $errors);
+
+        $output = view('error_bag')->render();
+
+        $this->assertStringContainsString('login=[login-email-error]', $output);
+        $this->assertStringContainsString('default=[]', $output);
+    }
+
     public function test_error_block_restores_outer_message_on_exit(): void
     {
         Session::start();

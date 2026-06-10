@@ -5,6 +5,34 @@ All notable changes to this package are documented here. The format follows
 [semver](https://semver.org/) with the usual pre-1.0 caveat that minor
 releases may contain breaking changes (flagged below).
 
+## [Unreleased — 0.23.0]
+
+Blade-parity feature release.
+
+### Added
+
+- **Form-state helpers**: `{checked when=...}`, `{selected when=...}`,
+  `{disabled when=...}`, `{readonly when=...}`, `{required when=...}` —
+  Blade's `@checked` family. Emits the bare attribute token when the
+  condition is truthy, nothing otherwise.
+- **`{env names="local,staging"}` / `{production}` blocks** (Blade's
+  `@env` / `@production`), with `inverse=true` for the negative arm and
+  the same lazy-body and fail-closed semantics as the gate blocks.
+  These are deliberately the only environment channel available to
+  templates running under the Strict security policy.
+- **`{error bag="login"}`** — named error-bag support on the `{error}`
+  block, mirroring `@error('field', 'login')` for multi-form pages.
+- **`args=[...]` on `{can}`/`{cannot}`/`{canany}`/`{canall}`** — the
+  multi-argument form of `@can('update', [$post, $extra])` for policy
+  methods with extra parameters. `model=` stays as the single-model
+  shorthand.
+
+### Documentation
+
+- A stacks recipe (`{capture append=}`) covering the `@push`/`@stack`
+  use case, with a clear note that `{push}`/`{stack}` was evaluated and
+  won't be added.
+
 ## [Unreleased — 0.22.0]
 
 Caching-correctness release: everything request- or locale-coupled is now

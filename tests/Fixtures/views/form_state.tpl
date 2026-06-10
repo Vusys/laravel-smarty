@@ -1,0 +1,7 @@
+checked=[{checked when=$on}]
+unchecked=[{checked when=$off}]
+default=[{checked}]
+selected=[{selected when=$on}]
+disabled=[{disabled when=$on}]
+readonly=[{readonly when=$on}]
+required=[{required when=$on}]

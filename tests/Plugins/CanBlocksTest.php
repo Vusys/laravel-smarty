@@ -29,6 +29,23 @@ class CanBlocksTest extends TestCase
         $this->assertStringNotContainsString('[can-yes]', $output);
     }
 
+    public function test_can_blocks_accept_multi_argument_args_form(): void
+    {
+        // Blade's @can('update-post', [$post, $extra]) — policy methods
+        // with extra parameters. `args=[...]` passes the full argument
+        // list; `model=` remains the single-model shorthand.
+        $this->actingAs($this->stubUser());
+        Gate::define('update-post', fn ($user, $post, $extra) => $extra === 'ok');
+
+        $allowed = view('can_args', ['post' => (object) [], 'extra' => 'ok'])->render();
+        $this->assertStringContainsString('[can-args-yes]', $allowed);
+        $this->assertStringNotContainsString('[cannot-args-yes]', $allowed);
+
+        $denied = view('can_args', ['post' => (object) [], 'extra' => 'nope'])->render();
+        $this->assertStringNotContainsString('[can-args-yes]', $denied);
+        $this->assertStringContainsString('[cannot-args-yes]', $denied);
+    }
+
     public function test_canany_renders_when_at_least_one_ability_passes(): void
     {
         $this->actingAs($this->stubUser());

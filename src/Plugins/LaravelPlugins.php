@@ -11,6 +11,7 @@ class LaravelPlugins
     public static function register(Smarty $smarty): void
     {
         FormPlugins::register($smarty);
+        EnvironmentPlugins::register($smarty);
         UrlPlugins::register($smarty);
         TranslationPlugins::register($smarty);
         AuthPlugins::register($smarty);

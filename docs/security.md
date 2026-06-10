@@ -41,6 +41,11 @@ Then point the config at it: `'security' => \App\Smarty\AppSecurityPolicy::class
 
 **Custom modifiers under Strict.** `StrictSecurityPolicy::$allowed_modifiers` ships with Smarty's built-in formatting modifiers plus the modifiers this package registers (`currency`, `trans`, `markdown`, etc.). If your app registers its own modifier, append it via subclassing — anything not on the list is rejected at render time with a `\Smarty\Exception`.
 
+**Reading the environment from sandboxed templates.** `{config key='app.env'}` is banned
+under Strict (it reads *any* config key), so the `{env names=...}` and `{production}`
+blocks are deliberately the only environment channel available to untrusted templates —
+a yes/no gate that leaks nothing sensitive. They stay usable under both shipped policies.
+
 **`markdown` produces raw (but sanitized) HTML.** The package's `markdown` modifier wraps `Str::markdown()` with `html_input: escape` and `allow_unsafe_links: false`, so HTML embedded in the source is escaped and `javascript:`/`data:` links are stripped — every tag in the output comes from CommonMark itself, never from the input. The rendered HTML is emitted without a `nofilter`. If your data-trust profile demands zero HTML from a modifier, drop `markdown` from `$allowed_modifiers` in a subclass.
 
 **Toggling the policy after templates were already compiled.** Smarty caches compiled templates under `compile_path`. Switching `'security'` from `null` to `'strict'` does not invalidate previously compiled output, so the first render after a switch may still execute a template that was compiled with no policy attached. Run `php artisan smarty:clear-compiled` after changing the setting to be safe.

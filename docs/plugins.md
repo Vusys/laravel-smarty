@@ -38,6 +38,16 @@ Block tags that wrap `auth()`, `Gate::allows()`, and friends. Their bodies short
 
 `{auth}` and `{guest}` accept an optional `guard=` parameter and otherwise default to the application's primary guard. Inside `{auth}` the authenticated user is bound as `$user` for the duration of the block (any outer `$user` is restored on exit), so you can write `{$user->name|escape}` without passing the user via view data. `{can}` / `{cannot}` accept `ability=` and an optional `model=` (passed as the gate's argument). `{canany}` / `{canall}` accept `abilities=[...]` and an optional `model=` — `{canany}` matches Blade's `@canany` (renders if any ability passes); `{canall}` is the equivalent of calling `Gate::check([...], $model)` (renders only when every ability passes).
 
+For policy methods with extra parameters, all four gate blocks also accept `args=[...]` — the multi-argument form of Blade's `@can('update', [$post, $extra])`:
+
+```smarty
+{can ability="update" args=[$post, $revision]}
+  <a href="...">Edit this revision</a>
+{/can}
+```
+
+`args=` carries the full argument list and wins over `model=` when both are given.
+
 Both multi-ability blocks accept `inverse=true` for the negative arm — `{canany inverse=true}` renders when *none* of the abilities pass, `{canall inverse=true}` renders when *any* of them are missing. Empty `abilities=[]` fails closed in both arms (an accidental empty list never authorizes). For an `{else}`-style layout in a single decision, drop into `{if}` with the wrapper methods on `$auth`:
 
 ```smarty
@@ -104,13 +114,19 @@ Scoped checks (`for=` or the modifier's second argument) need an explicit `{if $
 
   <input name="title" value="{old field='title' default=$post->title|default:''}">
 
+  <input type="checkbox" name="notify" {checked when=$user->wantsNotifications()}>
+  <select name="role">
+    <option value="admin" {selected when=$user->isAdmin()}>Admin</option>
+  </select>
+  <button type="submit" {disabled when=$form->locked}>Save</button>
+
   {error field="title"}
     <p class="error">{$message|escape}</p>
   {/error}
 </form>
 ```
 
-Inside `{error}` the validation message is bound as `$message` for the duration of the block, restored on exit.
+Inside `{error}` the validation message is bound as `$message` for the duration of the block, restored on exit. Multi-form pages can target a named error bag with `bag=`, mirroring Blade's `@error('title', 'login')`.
 
 | Tag | Equivalent |
 |-----|------------|
@@ -118,7 +134,8 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 | `{csrf_token}` | `csrf_token()` — raw token, e.g. for `<meta>` tags or AJAX headers |
 | `{method_field method="PUT"}` | `method_field('PUT')` |
 | `{old field="title" default=...}` | `old('title', $default)` — output is HTML-escaped like Blade's `{{ old(...) }}`; add `raw=true` to opt out. Array old-input (array form fields) renders as an empty string |
-| `{error field="..."}...{/error}` | `@error('...')` — body renders only when there is a validation error; `$message` is bound inside |
+| `{error field="..." bag="login"}...{/error}` | `@error('...', 'login')` — body renders only when there is a validation error; `$message` is bound inside; `bag=` defaults to `default` |
+| `{checked when=$cond}` / `{selected when=...}` / `{disabled when=...}` / `{readonly when=...}` / `{required when=...}` | Blade's `@checked` family — emits the bare attribute token when `when=` is truthy, nothing otherwise |
 
 ## URLs & assets
 
@@ -185,6 +202,39 @@ syntaxes produce identical output.
 | `{vite_content path="..." build_directory="..."}` | `Vite::content($path, $buildDirectory)` — file contents (e.g. for inline SVG sprites under hashed builds) |
 
 `{csp_nonce}`, `{vite_asset}`, and `{vite_content}` are all non-cacheable — the nonce changes per request, and asset URLs / contents change between hot mode and a built deployment.
+
+## Environment blocks
+
+Blade's `@env` / `@production` as lazy-body blocks — and deliberately the *only* channel for
+templates to read the app environment, since `{config key='app.env'}` is banned under the
+Strict security policy:
+
+```smarty
+{env names="local,staging"}
+  <div class="banner">Non-production environment</div>
+{/env}
+
+{env names=['local', 'staging']}…{/env}   {* array form works too *}
+
+{production}
+  {* analytics snippets, real payment buttons, … *}
+{/production}
+
+{production inverse=true}
+  <p>This is a test environment.</p>
+{/production}
+```
+
+| Tag | Equivalent |
+|-----|------------|
+| `{env names="..."}...{/env}` | `@env([...])` — `names=` takes a comma-separated string or an array; matches when the current environment is in the list |
+| `{env names="..." inverse=true}` | body renders when the environment is *not* in the list |
+| `{production}...{/production}` | `@production` |
+| `{production inverse=true}` | Blade's `@env('production')` negation — renders everywhere except production |
+
+A bare `{env}` with no `names=` fails closed in both arms, same as the gate blocks' empty
+`abilities=[]`. Hidden arms never evaluate their bodies. Both blocks are non-cacheable —
+a cached page can outlive a deploy or be shared across differently-configured nodes.
 
 ## Conditional attributes
 
@@ -263,3 +313,44 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
 | `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped. Gated to `local`/`testing`; silent no-op elsewhere |
 | `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts. Gated to `local`/`testing`; silent no-op elsewhere |
+
+## Stacks (`@push` / `@stack`)
+
+There is no `{push}` / `{stack}` pair, and one won't be added — we evaluated it and the
+cost/benefit doesn't hold up: Blade renders child content *before* the layout, so `@push`
+naturally collects before `@stack` flushes, while Smarty's `{extends}` compiles parent and
+child into a single template and renders top-down. A faithful port would need two-pass
+rendering or output buffering tricks that break under output caching.
+
+For the common case — a layout slot that child templates append to — Smarty's `{capture}`
+with `append=` covers it. `append='scripts'` appends each captured chunk to the `$scripts`
+template variable (an array), which the layout flushes after the content block:
+
+```smarty
+{* child.tpl *}
+{extends file='layouts/main.tpl'}
+
+{block name='content'}
+  {capture append='scripts'}<script src="/js/chart.js"></script>{/capture}
+  {capture append='scripts'}<script src="/js/dashboard.js"></script>{/capture}
+
+  …page content…
+{/block}
+```
+
+```smarty
+{* layouts/main.tpl *}
+<main>{block name='content'}{/block}</main>
+
+{foreach $scripts|default:[] as $chunk}
+  {$chunk nofilter}
+{/foreach}
+</body>
+```
+
+Caveats compared to real stacks: the `{capture}` calls must live *inside* a `{block}` —
+under `{extends}`, child content outside blocks is discarded at compile time; the flush
+point must come after the block that pushes (inheritance shares one variable scope and
+renders the parent top-down, so a `</body>` flush sees everything the content block
+appended); and there's no `@once` de-duplication — a partial `{include}`d twice pushes
+twice.
