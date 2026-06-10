@@ -36,9 +36,21 @@ final class SmartyPlugin
 {
     /**
      * @param  'modifier'|'function'|'block'  $type
+     * @param  bool  $cacheable  Set to false when the plugin's output
+     *                           depends on request state (auth, session,
+     *                           locale, current URL): under
+     *                           `smarty.caching` the call is then placed
+     *                           in a {nocache} region and re-evaluated on
+     *                           every cache hit instead of being baked
+     *                           into the cached page. Note Smarty only
+     *                           honours this for function and block
+     *                           plugins — modifier output follows the
+     *                           cacheability of the expression it
+     *                           appears in.
      */
     public function __construct(
         public readonly string $type,
         public readonly string $name,
+        public readonly bool $cacheable = true,
     ) {}
 }

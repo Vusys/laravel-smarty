@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Vusys\LaravelSmarty\Plugins\Discovery;
 
 use Smarty\Smarty;
+use Smarty\Template;
 use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 
 /**
@@ -44,6 +45,7 @@ class PluginRegistrar
                 self::smartyPluginType($descriptor->type),
                 $descriptor->name,
                 self::buildCallable($descriptor->type, $descriptor->class),
+                $descriptor->cacheable,
             );
 
             $registered[$key] = $descriptor->class;
@@ -70,7 +72,12 @@ class PluginRegistrar
     {
         return match ($type) {
             'modifier' => static fn (mixed ...$args): mixed => app()->make($class)(...$args),
-            'function' => static fn (array $params): string => (string) app()->make($class)($params),
+            // Smarty hands function plugins ($params, $template); forward
+            // both so a class-backed plugin can $template->assign() like
+            // every comparable built-in. Plugins that declare only
+            // (array $params) keep working — PHP ignores surplus args to
+            // userland callables.
+            'function' => static fn (array $params, Template $template): string => (string) app()->make($class)($params, $template),
             // For blocks the by-reference `$repeat` parameter must propagate
             // back through the closure into Smarty so the body short-circuit
             // path works. PHP binds the reference as long as the user's

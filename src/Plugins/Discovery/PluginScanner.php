@@ -111,7 +111,19 @@ class PluginScanner
             $descriptors[] = $descriptor;
         }
 
-        return $descriptors;
+        // Overlapping namespaces (`App\Smarty` + `App\Smarty\Plugins`) or a
+        // manual class inside a scanned namespace reach the same class
+        // twice and would trip PluginRegistrar's duplicate-name throw with
+        // the class cited as its own duplicate. Identical descriptors are
+        // one registration, not a collision — keep the first. A *true*
+        // collision (same type:name, different class) survives this pass
+        // and still throws downstream.
+        $unique = [];
+        foreach ($descriptors as $descriptor) {
+            $unique[$descriptor->type.':'.$descriptor->name.':'.$descriptor->class] ??= $descriptor;
+        }
+
+        return array_values($unique);
     }
 
     /**
@@ -142,7 +154,7 @@ class PluginScanner
             /** @var class-string $fqcn */
             $fqcn = $reflection->getName();
 
-            return new PluginDescriptor($attribute->type, $attribute->name, $fqcn);
+            return new PluginDescriptor($attribute->type, $attribute->name, $fqcn, $attribute->cacheable);
         }
 
         $type = self::typeFromSuffix($reflection->getShortName());
@@ -268,7 +280,9 @@ class PluginScanner
             }
         }
 
-        return $directories;
+        // Composer's PSR-4 table can map two prefixes onto the same
+        // directory; scanning it twice would double every descriptor.
+        return array_values(array_unique($directories));
     }
 
     private static function composerLoader(): ClassLoader

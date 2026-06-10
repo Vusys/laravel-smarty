@@ -11,7 +11,12 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\MessageBag;
+use Illuminate\Support\Number;
 use Illuminate\Support\ViewErrorBag;
+use Smarty\Smarty;
+use Vusys\LaravelSmarty\LaravelSmarty;
+use Vusys\LaravelSmarty\SmartyFactory;
+use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\TickFunction;
 
 /**
  * Smarty caching=true serves rendered output from disk on cache hits, so any
@@ -29,6 +34,129 @@ class CachingTest extends TestCase
         $app['config']->set('smarty.caching', true);
         $app['config']->set('smarty.cache_lifetime', 60);
         $app['config']->set('smarty.force_compile', false);
+    }
+
+    protected function tearDown(): void
+    {
+        SmartyFactory::flushConfigurators();
+        LaravelSmarty::flushDiscoveredCache();
+        TickFunction::$count = 0;
+
+        parent::tearDown();
+    }
+
+    public function test_cacheable_output_is_served_from_cache(): void
+    {
+        // Positive control. Every other test here asserts that nocache
+        // plugins re-evaluate — all of which would also pass if caching
+        // were entirely broken (every render a miss). This pins the
+        // inverse: a *cacheable* plugin runs once and the second render
+        // serves the first render's bytes.
+        // Named {bump}, not {counter} — Smarty ships a built-in {counter}
+        // handler in DefaultExtension, which sits ahead of registered
+        // plugins in the function-handler dispatch and would silently
+        // shadow this one.
+        $count = 0;
+        SmartyFactory::configure(static function (Smarty $smarty) use (&$count): void {
+            $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'bump', static function () use (&$count): string {
+                return (string) ++$count;
+            });
+        });
+
+        $first = view('cache_counter')->render();
+        $second = view('cache_counter')->render();
+
+        $this->assertStringContainsString('count=1', $first);
+        $this->assertSame($first, $second);
+        $this->assertSame(1, $count, 'Second render must be served from the output cache, not re-run the plugin.');
+    }
+
+    public function test_rendered_template_is_reported_cached(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+
+        $smarty = $this->app['view']->getEngineResolver()->resolve('smarty')->smarty();
+
+        $this->assertTrue($smarty->isCached($this->viewsPath.'/hello.tpl'));
+    }
+
+    public function test_trans_modifier_re_evaluates_on_cache_hit(): void
+    {
+        // Smarty ignores the cacheable flag for modifiers; the nocache
+        // behaviour comes from NocacheModifierCompiler wrapping the
+        // expression. This is the behavioural proof for |trans.
+        Lang::addLines(['messages.greeting' => 'Hello'], 'en');
+        Lang::addLines(['messages.greeting' => 'Bonjour'], 'fr');
+
+        App::setLocale('en');
+        $first = view('cache_trans')->render();
+        $this->assertStringContainsString('greeting=Hello', $first);
+
+        App::setLocale('fr');
+        $second = view('cache_trans')->render();
+        $this->assertStringContainsString('greeting=Bonjour', $second);
+    }
+
+    public function test_currency_modifier_re_evaluates_on_cache_hit(): void
+    {
+        if (! class_exists(Number::class)) {
+            $this->markTestSkipped('Illuminate\\Support\\Number requires Laravel 11+.');
+        }
+
+        Number::useLocale('en');
+
+        try {
+            $first = view('cache_currency')->render();
+            $this->assertStringContainsString('price='.Number::currency(1234.5), $first);
+
+            // Same template, different locale: a baked |currency result
+            // would replay the en formatting.
+            Number::useLocale('de');
+            $second = view('cache_currency')->render();
+            $this->assertStringContainsString('price='.Number::currency(1234.5), $second);
+            $this->assertNotSame($first, $second);
+        } finally {
+            Number::useLocale('en');
+        }
+    }
+
+    public function test_url_tags_re_evaluate_on_cache_hit(): void
+    {
+        // {route}/{url}/{asset} read the URL generator's root, which
+        // follows the current request's host and scheme — exactly the
+        // reason the $route wrapper is nocache.
+        Route::get('/home', fn () => 'ok')->name('home.index');
+
+        url()->forceRootUrl('http://first.test');
+        $first = view('cache_url_tags')->render();
+        $this->assertStringContainsString('route=http://first.test/home', $first);
+        $this->assertStringContainsString('url=http://first.test/login', $first);
+        $this->assertStringContainsString('asset=http://first.test/img/logo.svg', $first);
+
+        url()->forceRootUrl('http://second.test');
+        $second = view('cache_url_tags')->render();
+        $this->assertStringContainsString('route=http://second.test/home', $second);
+        $this->assertStringContainsString('url=http://second.test/login', $second);
+        $this->assertStringContainsString('asset=http://second.test/img/logo.svg', $second);
+    }
+
+    public function test_discovered_nocache_plugin_re_evaluates_on_cache_hit(): void
+    {
+        // End-to-end for the #[SmartyPlugin(cacheable: false)] flag:
+        // attribute → descriptor → registrar → Smarty registration →
+        // nocache region in a cached template.
+        LaravelSmarty::registerPluginClass(TickFunction::class);
+
+        $first = view('cache_tick')->render();
+        $second = view('cache_tick')->render();
+
+        $this->assertStringContainsString('tick=1', $first);
+        $this->assertStringContainsString('tick=2', $second);
+        $this->assertSame(2, TickFunction::$count);
+
+        $smarty = $this->app['view']->getEngineResolver()->resolve('smarty')->smarty();
+        [, $cacheable] = $smarty->getRegisteredPlugin(Smarty::PLUGIN_FUNCTION, 'tick');
+        $this->assertFalse($cacheable);
     }
 
     public function test_auth_block_re_evaluates_on_cache_hit(): void

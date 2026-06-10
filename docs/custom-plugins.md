@@ -89,6 +89,27 @@ final class TimeAgo
 
 A class carrying the attribute is **never** also matched by the suffix convention — the attribute wins outright, so renaming the class won't double-register the plugin.
 
+The attribute also carries the plugin's cacheability. If the output depends on request
+state — auth, session, locale, the current URL — declare `cacheable: false` and, under
+`smarty.caching`, the call compiles into a `{nocache}` region that re-evaluates on every
+cache hit instead of baking the first render's output into the cached page:
+
+```php
+#[SmartyPlugin(type: 'function', name: 'greeting', cacheable: false)]
+final class LocaleGreeting
+{
+    public function __invoke(array $params): string
+    {
+        return __('messages.greeting');
+    }
+}
+```
+
+Smarty only honours the flag for `function` and `block` plugins; a modifier's output
+follows the cacheability of the expression it appears in. Suffix-convention classes have
+no opt-out channel and always register cacheable — use the attribute when you need the
+flag.
+
 ### Configuring discovery
 
 ```php
@@ -153,7 +174,7 @@ Class plugins follow Smarty's native plugin signatures, so an `__invoke` method 
 | Type | `__invoke()` signature |
 |------|------------------------|
 | `modifier` | `__invoke(mixed $value, ...$extraArgs): mixed` — chainable like any other modifier. |
-| `function` | `__invoke(array $params): string` — params come straight from `{tag key=value …}`. |
+| `function` | `__invoke(array $params, \Smarty\Template $template): string` — params come straight from `{tag key=value …}`; `$template` enables the `assign=` idiom (`$template->assign($params['assign'], $value)`). Declare only `(array $params)` if you don't need it. |
 | `block` | `__invoke(array $params, ?string $content, \Smarty\Template $template, bool &$repeat): string` — `$content` is `null` on open, the body string on close. |
 
 ### Worked example: a block plugin

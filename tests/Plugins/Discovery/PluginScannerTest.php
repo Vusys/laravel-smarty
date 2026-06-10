@@ -7,6 +7,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginScanner;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\BadAttributeTypeModifier;
+use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\TickFunction;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AbstractBaseModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AttributeTaggedThing;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\CustomNamedModifier;
@@ -135,6 +136,54 @@ class PluginScannerTest extends TestCase
         $this->assertContains('block:wrap', $names);
         // Non-plugin classes silently ignored
         $this->assertNotContains('helper', $names);
+    }
+
+    public function test_overlapping_namespaces_yield_unique_descriptors(): void
+    {
+        // `App\Smarty` + `App\Smarty\Plugins` style overlap: the nested
+        // namespace's classes are reachable through both scans. Without
+        // the dedupe pass, PluginRegistrar would throw a duplicate-name
+        // exception citing NestedModifier as its own duplicate.
+        $descriptors = PluginScanner::scan([
+            'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins',
+            'Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins\\Subdir',
+        ], []);
+
+        $keys = array_map(static fn ($d) => $d->type.':'.$d->name.':'.$d->class, $descriptors);
+
+        $this->assertSame(array_values(array_unique($keys)), $keys);
+
+        $nested = array_filter($keys, static fn (string $key): bool => str_contains($key, 'NestedModifier'));
+        $this->assertCount(1, $nested);
+    }
+
+    public function test_manual_class_inside_scanned_namespace_registers_once(): void
+    {
+        $descriptors = PluginScanner::scan(
+            ['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'],
+            [SinceModifier::class],
+        );
+
+        $since = array_filter(
+            $descriptors,
+            static fn ($d): bool => $d->type === 'modifier' && $d->name === 'since',
+        );
+
+        $this->assertCount(1, $since);
+    }
+
+    public function test_attribute_cacheable_flag_lands_on_descriptor(): void
+    {
+        $descriptor = PluginScanner::resolveDescriptor(TickFunction::class);
+
+        $this->assertNotNull($descriptor);
+        $this->assertFalse($descriptor->cacheable);
+
+        // Convention-resolved classes have no opt-out channel and default
+        // to cacheable, matching registerPlugin()'s own default.
+        $bySuffix = PluginScanner::resolveDescriptor(SinceModifier::class);
+        $this->assertNotNull($bySuffix);
+        $this->assertTrue($bySuffix->cacheable);
     }
 
     public function test_namespace_scan_accepts_a_leading_backslash(): void

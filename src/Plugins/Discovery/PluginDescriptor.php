@@ -20,10 +20,11 @@ final class PluginDescriptor
         public readonly string $type,
         public readonly string $name,
         public readonly string $class,
+        public readonly bool $cacheable = true,
     ) {}
 
     /**
-     * @return array{type: 'modifier'|'function'|'block', name: string, class: class-string}
+     * @return array{type: 'modifier'|'function'|'block', name: string, class: class-string, cacheable: bool}
      */
     public function toArray(): array
     {
@@ -31,11 +32,12 @@ final class PluginDescriptor
             'type' => $this->type,
             'name' => $this->name,
             'class' => $this->class,
+            'cacheable' => $this->cacheable,
         ];
     }
 
     /**
-     * @param  array{type: string, name: string, class: string}  $payload
+     * @param  array{type: string, name: string, class: string, cacheable?: bool}  $payload
      */
     public static function fromArray(array $payload): self
     {
@@ -47,6 +49,6 @@ final class PluginDescriptor
         /** @var class-string $class */
         $class = $payload['class'];
 
-        return new self($type, $payload['name'], $class);
+        return new self($type, $payload['name'], $class, $payload['cacheable'] ?? true);
     }
 }
