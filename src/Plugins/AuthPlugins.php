@@ -49,7 +49,7 @@ class AuthPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'can', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
-                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+                $arguments = self::gateArguments($params);
 
                 if (! Gate::check($params['ability'] ?? '', $arguments)) {
                     $repeat = false;
@@ -63,7 +63,7 @@ class AuthPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'cannot', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
-                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+                $arguments = self::gateArguments($params);
 
                 if (! Gate::denies($params['ability'] ?? '', $arguments)) {
                     $repeat = false;
@@ -77,7 +77,7 @@ class AuthPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'canany', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
-                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+                $arguments = self::gateArguments($params);
                 $abilities = (array) ($params['abilities'] ?? []);
                 $inverse = (bool) ($params['inverse'] ?? false);
 
@@ -101,7 +101,7 @@ class AuthPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'canall', static function ($params, $content, $template, &$repeat): string {
             if ($content === null) {
-                $arguments = array_key_exists('model', $params) ? [$params['model']] : [];
+                $arguments = self::gateArguments($params);
                 $abilities = (array) ($params['abilities'] ?? []);
                 $inverse = (bool) ($params['inverse'] ?? false);
 
@@ -123,5 +123,25 @@ class AuthPlugins
 
             return (string) $content;
         }, false);
+    }
+
+    /**
+     * Gate arguments for {can}/{cannot}/{canany}/{canall}: `args=[...]`
+     * is Blade's `@can('update', [$post, $extra])` multi-argument form
+     * (policy methods with extra parameters); `model=` stays as the
+     * common single-model shorthand. `args=` wins when both are given.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<int, mixed>
+     */
+    private static function gateArguments(array $params): array
+    {
+        if (array_key_exists('args', $params)) {
+            $args = $params['args'];
+
+            return is_array($args) ? array_values($args) : [$args];
+        }
+
+        return array_key_exists('model', $params) ? [$params['model']] : [];
     }
 }

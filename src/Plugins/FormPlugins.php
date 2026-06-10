@@ -37,10 +37,26 @@ class FormPlugins
             return ($params['raw'] ?? false) ? $value : PluginOutput::escape($value);
         }, false);
 
+        // Blade's @checked/@selected/@disabled/@readonly/@required: emit
+        // the bare attribute token when the condition is truthy. The
+        // output is a fixed token (never user data), so there's nothing
+        // to escape, and as pure functions of their input they stay
+        // cacheable — under smarty.caching the *condition* is what
+        // determines cacheability, exactly as with any {$var} the
+        // template prints.
+        foreach (['checked', 'selected', 'disabled', 'readonly', 'required'] as $attribute) {
+            $smarty->registerPlugin(
+                Smarty::PLUGIN_FUNCTION,
+                $attribute,
+                static fn (array $params): string => ($params['when'] ?? false) ? $attribute : '',
+            );
+        }
+
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'error', static function ($params, $content, Template $template, &$repeat): string {
             $field = $params['field'] ?? '';
+            $bagName = $params['bag'] ?? 'default';
             $errors = session('errors');
-            $bag = $errors instanceof ViewErrorBag ? $errors->getBag('default') : null;
+            $bag = $errors instanceof ViewErrorBag ? $errors->getBag(is_string($bagName) ? $bagName : 'default') : null;
             $hasError = $bag !== null && $bag->has($field);
 
             if ($content === null) {
