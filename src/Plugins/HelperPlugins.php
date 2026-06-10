@@ -8,14 +8,22 @@ use Illuminate\Support\Js;
 use Illuminate\Support\Str;
 use Smarty\Smarty;
 use Smarty\Template;
+use Vusys\LaravelSmarty\Compile\HelperModifierExtension;
 
 class HelperPlugins
 {
     public static function register(Smarty $smarty): void
     {
-        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'json', static fn ($value): string => (string) Js::from($value));
+        // Compile-time handlers for json/markdown mark their print
+        // expressions raw so the (already safe) output isn't escaped a
+        // second time. The runtime callbacks below stay registered for
+        // introspection and dynamic invocation; the extension wins at
+        // compile time.
+        $smarty->addExtension(new HelperModifierExtension);
 
-        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'markdown', static fn ($value): string => (string) Str::markdown((string) $value));
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'json', self::js(...));
+
+        $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'markdown', self::markdown(...));
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'config', static fn (array $params) => config($params['key'] ?? '', $params['default'] ?? null));
 
@@ -59,5 +67,35 @@ class HelperPlugins
 
             dd(...array_values($params));
         }, false);
+    }
+
+    /**
+     * `|json` — Js::from() output: JSON encoded then escaped for embedding
+     * in JS string and HTML-attribute contexts. Blade's `@js`, not `@json`.
+     * Called from compiled templates (see JsonModifierCompiler).
+     */
+    public static function js(mixed $value): string
+    {
+        return (string) Js::from($value);
+    }
+
+    /**
+     * `|markdown` — CommonMark with hardened options. The defaults
+     * (`html_input: allow`) pass author HTML through verbatim; since this
+     * modifier's output is emitted raw (see MarkdownModifierCompiler),
+     * embedded HTML is escaped and `javascript:`/`data:` links are
+     * stripped so the result is safe even on user-supplied content.
+     * Called from compiled templates.
+     */
+    public static function markdown(mixed $value): string
+    {
+        if (! is_scalar($value) && ! $value instanceof \Stringable) {
+            return '';
+        }
+
+        return (string) Str::markdown((string) $value, [
+            'html_input' => 'escape',
+            'allow_unsafe_links' => false,
+        ]);
     }
 }

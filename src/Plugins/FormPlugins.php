@@ -18,7 +18,24 @@ class FormPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'method_field', static fn (array $params): string => (string) method_field($params['method'] ?? ''));
 
-        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'old', static fn (array $params) => old($params['field'] ?? null, $params['default'] ?? null), false);
+        // Escaped by default: old() round-trips the user's previous
+        // submission, and function-plugin output bypasses escape_html —
+        // without this a failed validation reflects `"><script>` straight
+        // back into the form. `raw=true` opts out (Blade's {!! !!} moment).
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'old', static function (array $params): string {
+            $value = old($params['field'] ?? null, $params['default'] ?? null);
+
+            // Array old-input (array form fields like `emails[]`) has no
+            // single printable value — render nothing instead of "Array"
+            // plus a conversion warning.
+            if (! is_scalar($value)) {
+                return '';
+            }
+
+            $value = (string) $value;
+
+            return ($params['raw'] ?? false) ? $value : PluginOutput::escape($value);
+        }, false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_BLOCK, 'error', static function ($params, $content, Template $template, &$repeat): string {
             $field = $params['field'] ?? '';

@@ -10,6 +10,8 @@ use Vusys\LaravelSmarty\SmartyEngine;
 
 class ClearCacheCommand extends Command
 {
+    use ResolvesTemplateNames;
+
     protected $signature = 'smarty:clear-cache
         {--file= : Clear cache for a specific template file}
         {--cache-id= : Restrict to a cache_id group}
@@ -30,7 +32,7 @@ class ClearCacheCommand extends Command
         $compileId = $this->option('compile-id');
 
         $count = is_string($file) && $file !== ''
-            ? $smarty->clearCache($file, is_string($cacheId) ? $cacheId : null, is_string($compileId) ? $compileId : null, $expire)
+            ? $smarty->clearCache($this->resolveTemplateName($smarty, $file), is_string($cacheId) ? $cacheId : null, is_string($compileId) ? $compileId : null, $expire)
             : $smarty->clearAllCache($expire);
 
         $this->info("Cleared {$count} Smarty cache file(s).");

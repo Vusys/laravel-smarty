@@ -25,4 +25,16 @@ class LangChoiceTest extends TestCase
         // helper would silently pluralise as "1 apple" instead.
         $this->assertStringContainsString('function_default=no apples', $output);
     }
+
+    public function test_lang_choice_output_is_escaped(): void
+    {
+        // Same rationale as {lang}: replacements reach the page through a
+        // function plugin, outside the escape_html pass.
+        Lang::addLines(['messages.apples_named' => '[1,*] :count :fruit'], 'en');
+
+        $output = view('lang_choice_escape', ['fruit' => '<i>pears</i>'])->render();
+
+        $this->assertStringContainsString('escaped=3 &lt;i&gt;pears&lt;/i&gt;', $output);
+        $this->assertStringContainsString('raw=3 <i>pears</i>', $output);
+    }
 }

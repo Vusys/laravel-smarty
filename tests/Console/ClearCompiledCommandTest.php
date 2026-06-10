@@ -35,6 +35,22 @@ class ClearCompiledCommandTest extends TestCase
         $this->assertCount(1, $files->files($this->compilePath));
     }
 
+    public function test_empty_file_option_still_clears_everything(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+        view('loop', ['items' => ['one']])->render();
+
+        $files = new Filesystem;
+        $this->assertCount(2, $files->files($this->compilePath));
+
+        // Symfony parses `--file=` as an empty string. Aligned with
+        // smarty:clear-cache: an empty value falls through to a full
+        // clear rather than silently clearing nothing.
+        $this->artisan('smarty:clear-compiled', ['--file' => ''])->assertSuccessful();
+
+        $this->assertEmpty($files->files($this->compilePath));
+    }
+
     public function test_expire_option_preserves_fresh_compiled_files(): void
     {
         view('hello', ['name' => 'World'])->render();
