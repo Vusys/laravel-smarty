@@ -28,6 +28,22 @@ class SmartyEngineTest extends TestCase
         $this->assertStringContainsString('<li>three</li>', $output);
     }
 
+    public function test_same_basename_views_resolve_to_their_own_directory(): void
+    {
+        // The engine hands Smarty the absolute path, so FilePlugin skips
+        // its template-dir search. Resolving by basename would render the
+        // root collision.tpl for both views (first template dir wins).
+        $root = view('collision')->render();
+        $this->assertStringContainsString('root-collision', $root);
+
+        $admin = view('admin.collision')->render();
+        $this->assertStringContainsString('admin-collision', $admin);
+        $this->assertStringNotContainsString('root-collision', $admin);
+
+        // Relative {include} names still resolve through the template dirs.
+        $this->assertStringContainsString('[nav]', $admin);
+    }
+
     public function test_smarty_takes_precedence_over_blade_when_both_files_exist(): void
     {
         $output = view('welcome', ['message' => 'hi'])->render();

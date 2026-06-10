@@ -8,7 +8,7 @@ The package ships two `\Smarty\Security` subclasses you can opt into with one co
 |------------|--------------------------------------------------------------------|----------|
 | `null`     | _no policy_                                                         | Default. Trusted, dev-authored templates only. |
 | `balanced` | `Vusys\LaravelSmarty\Security\BalancedSecurityPolicy`              | Admin-authored / CMS templates. Blocks `{php}`, `{math}`, super-globals, and arbitrary static-class access. Leaves modifiers and constants alone. |
-| `strict`   | `Vusys\LaravelSmarty\Security\StrictSecurityPolicy`                | User-submitted / multi-tenant templates. Inherits Balanced and additionally blocks `{fetch}` / `{eval}` / `{include_php}`, all constants, all stream wrappers, and switches modifiers to an explicit allow-list (Smarty 5's full default modifier set minus `regex_replace` for catastrophic-backtracking DoS, plus this package's own modifiers). |
+| `strict`   | `Vusys\LaravelSmarty\Security\StrictSecurityPolicy`                | User-submitted / multi-tenant templates. Inherits Balanced and additionally blocks `{fetch}` / `{eval}` / `{include_php}`, the package's state-reaching helpers `{config}` / `{service}` / `{session}` / `{dump}` / `{dd}` (config keys, container bindings, and session state have no place in untrusted templates — the `$auth`/`$session`/`$request` wrapper objects remain the sanctioned read channel), all constants, all stream wrappers, and switches modifiers to an explicit allow-list (Smarty 5's full default modifier set minus `regex_replace` for catastrophic-backtracking DoS, plus this package's own modifiers). |
 
 Enable in `config/smarty.php`:
 
@@ -41,7 +41,7 @@ Then point the config at it: `'security' => \App\Smarty\AppSecurityPolicy::class
 
 **Custom modifiers under Strict.** `StrictSecurityPolicy::$allowed_modifiers` ships with Smarty's built-in formatting modifiers plus the modifiers this package registers (`currency`, `trans`, `markdown`, etc.). If your app registers its own modifier, append it via subclassing — anything not on the list is rejected at render time with a `\Smarty\Exception`.
 
-**`markdown` produces raw HTML.** The package's `markdown` modifier wraps `Str::markdown()` and emits unescaped tags (`<strong>`, `<a>`, …). The Strict policy's threat model is "trusted data, untrusted template" — it doesn't gate the *data* templates render. If your app passes user-controlled strings into a template that uses `{$x|markdown nofilter}`, that's still a stored-XSS surface. Drop `markdown` from `$allowed_modifiers` in a subclass if your data-trust profile demands it.
+**`markdown` produces raw (but sanitized) HTML.** The package's `markdown` modifier wraps `Str::markdown()` with `html_input: escape` and `allow_unsafe_links: false`, so HTML embedded in the source is escaped and `javascript:`/`data:` links are stripped — every tag in the output comes from CommonMark itself, never from the input. The rendered HTML is emitted without a `nofilter`. If your data-trust profile demands zero HTML from a modifier, drop `markdown` from `$allowed_modifiers` in a subclass.
 
 **Toggling the policy after templates were already compiled.** Smarty caches compiled templates under `compile_path`. Switching `'security'` from `null` to `'strict'` does not invalidate previously compiled output, so the first render after a switch may still execute a template that was compiled with no policy attached. Run `php artisan smarty:clear-compiled` after changing the setting to be safe.
 

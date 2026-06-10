@@ -50,7 +50,14 @@ class SmartyEngine implements Engine
             $this->smarty->addTemplateDir($directory);
         }
 
-        $template = $this->smarty->createTemplate($this->files->basename($path), null, null, $this->smarty);
+        // Pass the absolute path: Smarty's FilePlugin short-circuits its
+        // template-dir search for absolute names, so two views sharing a
+        // basename (dashboard.tpl vs admin/dashboard.tpl) each render
+        // their own file. Resolving by basename would let whichever
+        // template dir was registered first win. The directory is still
+        // appended above so relative {include}/{extends} names keep
+        // resolving against the view roots.
+        $template = $this->smarty->createTemplate($path, null, null, $this->smarty);
 
         foreach (self::RESERVED_VARIABLES as $reserved) {
             if (! array_key_exists($reserved, $data)) {

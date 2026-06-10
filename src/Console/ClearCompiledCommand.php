@@ -10,6 +10,8 @@ use Vusys\LaravelSmarty\SmartyEngine;
 
 class ClearCompiledCommand extends Command
 {
+    use ResolvesTemplateNames;
+
     protected $signature = 'smarty:clear-compiled
         {--file= : Clear compiled output for a specific template}
         {--compile-id= : Restrict to a compile_id}
@@ -28,7 +30,7 @@ class ClearCompiledCommand extends Command
         $compileId = $this->option('compile-id');
 
         $count = $smarty->clearCompiledTemplate(
-            is_string($file) ? $file : null,
+            is_string($file) && $file !== '' ? $this->resolveTemplateName($smarty, $file) : null,
             is_string($compileId) ? $compileId : null,
             $expire,
         );

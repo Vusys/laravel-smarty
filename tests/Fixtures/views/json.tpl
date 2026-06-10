@@ -1,1 +1,1 @@
-var x = {$payload|json nofilter};
+var x = {$payload|json};

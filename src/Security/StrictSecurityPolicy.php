@@ -37,8 +37,20 @@ class StrictSecurityPolicy extends BalancedSecurityPolicy
      * time via array spread in the property default below, so any
      * future addition to BalancedSecurityPolicy::CORE_DISABLED_TAGS
      * is inherited automatically.
+     *
+     * Beyond Smarty's own dangerous tags, this bans the package helpers
+     * that reach application internals: `{config}` reads any config key
+     * (APP_KEY, DB credentials), `{service}` resolves arbitrary container
+     * bindings into template variables with unrestricted method-call
+     * access, `{session}` reads arbitrary session state, and `{dump}`/
+     * `{dd}` disclose internals (env-gated, but untrusted authors don't
+     * get to probe). Wrapper objects ($auth, $session, ...) remain the
+     * sanctioned read channel.
      */
-    public const ADDITIONAL_DISABLED_TAGS = ['fetch', 'include_php', 'eval'];
+    public const ADDITIONAL_DISABLED_TAGS = [
+        'fetch', 'include_php', 'eval',
+        'config', 'service', 'session', 'dump', 'dd',
+    ];
 
     /**
      * @var array<int, string>
@@ -72,9 +84,11 @@ class StrictSecurityPolicy extends BalancedSecurityPolicy
         'replace', 'spacify', 'split', 'truncate',
         // Deliberately NOT included: 'regex_replace' (DoS via catastrophic backtracking).
 
-        // Package-shipped Laravel helpers (sync with src/Plugins/*):
+        // Package-shipped Laravel helpers (sync with src/Plugins/* —
+        // StrictSecurityPolicyTest has a sync test that fails when a
+        // first-party modifier is missing from this list):
         'currency', 'file_size', 'percentage', 'abbreviate', 'number_for_humans',
-        'trans', 'trans_choice', 'json', 'markdown',
+        'trans', 'trans_choice', 'json', 'markdown', 'feature_active',
     ];
 
     /**

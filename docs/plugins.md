@@ -117,7 +117,7 @@ Inside `{error}` the validation message is bound as `$message` for the duration 
 | `{csrf_field}` | `csrf_field()` — full hidden input |
 | `{csrf_token}` | `csrf_token()` — raw token, e.g. for `<meta>` tags or AJAX headers |
 | `{method_field method="PUT"}` | `method_field('PUT')` |
-| `{old field="title" default=...}` | `old('title', $default)` |
+| `{old field="title" default=...}` | `old('title', $default)` — output is HTML-escaped like Blade's `{{ old(...) }}`; add `raw=true` to opt out. Array old-input (array form fields) renders as an empty string |
 | `{error field="..."}...{/error}` | `@error('...')` — body renders only when there is a validation error; `$message` is bound inside |
 
 ## URLs & assets
@@ -144,10 +144,21 @@ Both signed-URL helpers are non-cacheable: a baked signature would either ship a
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
-| `{lang key="..." foo=... bar=...}` | `__('...', ['foo' => ..., 'bar' => ...])` — every named param other than `key=` becomes a replacement |
+| `{lang key="..." foo=... bar=...}` | `__('...', ['foo' => ..., 'bar' => ...])` — every named param other than `key=` and `raw=` becomes a replacement |
 | `\|trans` modifier | `__($key, $replace = [])` |
-| `{lang_choice key="..." count=$n foo=...}` | `trans_choice('...', $n, ['foo' => ...])` — every named param other than `key=` and `count=` becomes a replacement |
+| `{lang_choice key="..." count=$n foo=...}` | `trans_choice('...', $n, ['foo' => ...])` — every named param other than `key=`, `count=` and `raw=` becomes a replacement |
 | `\|trans_choice` modifier | `trans_choice($key, $count, $replace = [])` |
+
+`{lang}` and `{lang_choice}` output is HTML-escaped like Blade's `{{ __(...) }}` — replacement
+values are user data more often than not. For translation lines that intentionally contain
+markup, opt out per call with `raw=true`:
+
+```smarty
+{lang key="legal.disclaimer_html" raw=true}
+```
+
+The `|trans` / `|trans_choice` modifiers are covered by the regular `escape_html` pass, so both
+syntaxes produce identical output.
 
 ## Vite
 
@@ -231,8 +242,9 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 {service name="App\\Services\\PricingTable" assign="pricing"}
 <p>From {$pricing->headlinePrice()|currency:'GBP'}/month.</p>
 
-{* Render trusted Markdown to HTML — `nofilter` opts out of auto-escape *}
-<article>{$post->body|markdown nofilter}</article>
+{* Render Markdown to HTML — output is sanitized (embedded HTML escaped,
+   javascript:/data: links stripped) and emitted raw automatically *}
+<article>{$post->body|markdown}</article>
 
 {* JSON-encode for safe embedding inside a <script> *}
 <script>window.__APP_CONFIG = {$config|json};</script>
@@ -246,8 +258,8 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 | `{session key="status" default=...}` | `session('status', $default)` |
 | `{session key="status" assign="status"}` | `$status = session('status')` (assigns instead of printing) |
 | `$session->status` (auto-shared, see [Auto-shared wrapper objects](wrapper-objects.md)) | `session('status')` |
-| `\|markdown` modifier | `Illuminate\Support\Str::markdown($value)` — pair with `nofilter` to keep the rendered HTML, the same way you'd reach for Blade's `{!! !!}` |
-| `\|json` modifier | `Js::from($value)` — JSON-encodes for safe JS embedding |
+| `\|markdown` modifier | `Str::markdown($value, ['html_input' => 'escape', 'allow_unsafe_links' => false])` — embedded HTML is escaped and `javascript:`/`data:` links are stripped, so the result renders unescaped without `nofilter` |
+| `\|json` modifier | `Js::from($value)` — Blade's `@js`, *not* `@json`/`json_encode()`. Output is script-safe already and renders without `nofilter` |
 | `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
 | `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped. Gated to `local`/`testing`; silent no-op elsewhere |
 | `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts. Gated to `local`/`testing`; silent no-op elsewhere |
