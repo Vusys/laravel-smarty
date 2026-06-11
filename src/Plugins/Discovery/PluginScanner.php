@@ -210,7 +210,15 @@ class PluginScanner
         $suffixLength = strlen(ucfirst($type));
         $stripped = substr($shortName, 0, -$suffixLength);
 
-        return Str::snake($stripped);
+        $name = Str::snake($stripped);
+
+        // A class named exactly Modifier/Function/Block strips down to ''
+        // and would register a nameless tag — fail loud instead.
+        if ($name === '') {
+            throw PluginRegistrationException::emptyDerivedName($reflection->getName(), $type);
+        }
+
+        return $name;
     }
 
     /**

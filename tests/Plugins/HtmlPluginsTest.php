@@ -51,24 +51,24 @@ class HtmlPluginsTest extends TestCase
 
     public function test_extract_array_keeps_each_scalar_type_and_drops_the_rest(): void
     {
-        // Each of bool / int / string must pass; null, object, array
-        // and float must drop. Mixing all six types in one call pins
-        // the three branches in the OR-chain — flipping any of them to
-        // && or negating one would change the surviving key set.
+        // bool / int / string pass through unchanged; a float collapses
+        // to its truthiness bool; null, object and array drop. Mixing all
+        // types in one call pins each branch — flipping any to && or
+        // negating one would change the surviving key set.
         $method = new ReflectionMethod(HtmlPlugins::class, 'extractArray');
 
         $result = $method->invoke(null, ['array' => [
             'flag' => true,
             'n' => 42,
             's' => 'hello',
+            'flt' => 1.5,
             'nope' => null,
             'obj' => new \stdClass,
             'nested' => ['x'],
-            'flt' => 1.5,
         ]]);
 
         $this->assertSame(
-            ['flag' => true, 'n' => 42, 's' => 'hello'],
+            ['flag' => true, 'n' => 42, 's' => 'hello', 'flt' => true],
             $result,
         );
     }

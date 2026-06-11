@@ -40,6 +40,12 @@ class HtmlPlugins
         foreach ($array as $key => $value) {
             if (is_bool($value) || is_int($value) || is_string($value)) {
                 $result[$key] = $value;
+            } elseif (is_float($value)) {
+                // Arr::toCssClasses/toCssStyles read the value purely as a
+                // truthiness condition; collapse the float to that bool so
+                // it still counts. Dropping it silently disabled the class
+                // or style it guarded.
+                $result[$key] = (bool) $value;
             }
         }
 

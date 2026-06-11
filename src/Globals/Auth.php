@@ -58,6 +58,12 @@ final class Auth
      * True when `$user` is the authenticated user. Returns false on
      * `null` so `$auth->is($post->user)` is safe when a relation
      * hasn't loaded.
+     *
+     * The identifier comparison is strict (`===`): a false negative is
+     * possible only if the two identifiers diverge in type (e.g. an int
+     * route-model-bound id vs a string driver id) for the same logical
+     * user — vanishingly unlikely in practice, but worth knowing if a
+     * custom auth setup mixes identifier types.
      */
     public function is(?Authenticatable $user): bool
     {

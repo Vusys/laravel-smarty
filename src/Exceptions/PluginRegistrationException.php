@@ -31,6 +31,15 @@ class PluginRegistrationException extends LogicException
         );
     }
 
+    public static function emptyDerivedName(string $class, string $type): self
+    {
+        return new self(
+            "Class {$class} derives an empty {$type} name from its classname. "
+            .'Give it a longer name (e.g. SinceModifier, not just Modifier), or '
+            .'declare a public $name property / #[SmartyPlugin(name: ...)] attribute.'
+        );
+    }
+
     public static function duplicateName(string $type, string $name, string $existingClass, string $newClass): self
     {
         return new self(

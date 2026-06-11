@@ -7,14 +7,20 @@ namespace Vusys\LaravelSmarty\Plugins\Discovery;
 /**
  * On-disk cache for the discovered class-backed plugin map.
  *
- * Production renders shouldn't pay the cost of walking the filesystem
- * on every cold start, so the discovery output is serialised to a PHP
- * file under `bootstrap/cache/` (mirroring Laravel's package manifest).
- * The fingerprint covers two layers: the configured + programmatic
- * namespaces and manually-registered classes, plus the *.php files
- * within those namespaces (path + mtime). The file-layer hash means
- * adding, removing, or modifying a plugin class invalidates the cache
- * automatically — no explicit `smarty:plugins:clear` required.
+ * Production renders shouldn't pay the cost of reflecting over every
+ * plugin class on each cold start, so the discovery output is serialised
+ * to a PHP file under `bootstrap/cache/` (mirroring Laravel's package
+ * manifest). The fingerprint covers two layers: the configured +
+ * programmatic namespaces and manually-registered classes, plus the
+ * *.php files within those namespaces (path + mtime). The file-layer
+ * hash means adding, removing, or modifying a plugin class invalidates
+ * the cache automatically — no explicit `smarty:plugins:clear` required.
+ *
+ * Note the cache skips *reflection/parsing*, not the filesystem walk:
+ * `load()` still globs every namespace directory to mtime its files for
+ * the fingerprint on each cold start. A trust-the-cache mode that skips
+ * even that (à la `config:cache`) is deliberately out of scope until the
+ * walk is measured as a real cost.
  */
 class PluginCacheStore
 {

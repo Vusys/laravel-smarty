@@ -25,19 +25,17 @@ class HelperPlugins
 
         $smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'markdown', self::markdown(...));
 
-        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'config', static fn (array $params) => config($params['key'] ?? '', $params['default'] ?? null));
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'config', static fn (array $params, Template $template): string => self::assignOrStringify(
+            config($params['key'] ?? '', $params['default'] ?? null),
+            $params,
+            $template,
+        ));
 
-        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'session', static function (array $params, Template $template) {
-            $value = session($params['key'] ?? null, $params['default'] ?? null);
-
-            if (isset($params['assign'])) {
-                $template->assign($params['assign'], $value);
-
-                return '';
-            }
-
-            return $value;
-        }, false);
+        $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'session', static fn (array $params, Template $template): string => self::assignOrStringify(
+            session($params['key'] ?? null, $params['default'] ?? null),
+            $params,
+            $template,
+        ), false);
 
         $smarty->registerPlugin(Smarty::PLUGIN_FUNCTION, 'service', static function (array $params, Template $template): string {
             $template->assign($params['assign'] ?? '', resolve($params['name'] ?? ''));
@@ -67,6 +65,35 @@ class HelperPlugins
 
             dd(...array_values($params));
         }, false);
+    }
+
+    /**
+     * Shared tail for the `{config}`/`{session}` function tags. When an
+     * `assign=` param is given the value is bound to that template
+     * variable (returning '' so nothing prints), which is the only way to
+     * surface a non-scalar config/session value — an array reached the
+     * tag as inline output would otherwise echo a useless "Array" and
+     * raise a PHP "Array to string conversion" warning. Inline, only
+     * stringable values render; anything else (array, object, null)
+     * returns ''.
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private static function assignOrStringify(mixed $value, array $params, Template $template): string
+    {
+        $assign = $params['assign'] ?? null;
+
+        if (is_string($assign) && $assign !== '') {
+            $template->assign($assign, $value);
+
+            return '';
+        }
+
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            return (string) $value;
+        }
+
+        return '';
     }
 
     /**
