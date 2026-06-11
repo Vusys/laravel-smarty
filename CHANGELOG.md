@@ -5,6 +5,38 @@ All notable changes to this package are documented here. The format follows
 [semver](https://semver.org/) with the usual pre-1.0 caveat that minor
 releases may contain breaking changes (flagged below).
 
+## [0.21.1] - 2026-06-11
+
+A maintenance release clearing the post-review backlog: small correctness
+fixes to the helper tags and plugin discovery, plus docblock corrections
+where the prose had drifted from the code.
+
+### Fixed
+
+- **`{config}` / `{session}` no longer echo `"Array"`.** An array value
+  emitted inline produced the literal `Array` plus a PHP "Array to string
+  conversion" warning; it now renders an empty string. `{config}` also
+  gains the `assign=` parameter `{session}` already had — the supported
+  way to pull a non-scalar config value into a template variable
+  (`{config key='services' assign='svc'}`).
+- **`{class}` / `{style}` keep float conditions.** `HtmlPlugins`
+  previously dropped `float` values, silently disabling any class or style
+  guarded by one; floats are now honoured as their truthiness condition.
+- **Discovery rejects an empty derived plugin name.** A class named
+  exactly `Modifier`, `Function` or `Block` strips to an empty tag name;
+  the scanner now throws `PluginRegistrationException` instead of
+  registering an unusable nameless tag.
+
+### Changed
+
+- Internal docblock corrections with no runtime effect: `PluginRegistrar`
+  (container resolution runs per invocation, not memoized),
+  `BalancedSecurityPolicy` (`{php}` no longer exists in Smarty 5, so the
+  ban is defensive rather than "the largest RCE vector"), `PluginCacheStore`
+  (the cache skips reflection, not the filesystem walk), `LineTrackingCompiler`
+  (Smarty 5's `compileTag()` returns `string`, never `false`) and
+  `Auth::is()` (note on the strict identifier comparison).
+
 ## [0.21.0] - 2026-06-11
 
 Output is now safe by default, everything request- or locale-coupled is
