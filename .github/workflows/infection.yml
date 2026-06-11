@@ -31,9 +31,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # --logger-github emits annotations via workflow commands on stdout;
+    # no API permissions beyond checkout are needed.
     permissions:
       contents: read
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -52,10 +53,14 @@ jobs:
           coverage: pcov
           tools: composer:v2
 
+      - name: Determine composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Composer dependencies
         uses: actions/cache@v5
         with:
-          path: ~/.composer/cache/files
+          path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-infection-${{ hashFiles('composer.json') }}
           restore-keys: composer-infection-
 
@@ -91,10 +96,14 @@ jobs:
           coverage: pcov
           tools: composer:v2
 
+      - name: Determine composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Composer dependencies
         uses: actions/cache@v5
         with:
-          path: ~/.composer/cache/files
+          path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-infection-${{ hashFiles('composer.json') }}
           restore-keys: composer-infection-
 

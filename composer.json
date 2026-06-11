@@ -3,12 +3,36 @@
     "description": "Replace Blade with Smarty as the default Laravel template engine.",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "laravel",
+        "smarty",
+        "template",
+        "templating",
+        "view",
+        "blade",
+        "template-engine"
+    ],
+    "homepage": "https://vusys.github.io/laravel-smarty/",
+    "authors": [
+        {
+            "name": "Bryan",
+            "email": "bryan@vuii.co.uk"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Vusys/laravel-smarty/issues",
+        "source": "https://github.com/Vusys/laravel-smarty",
+        "docs": "https://vusys.github.io/laravel-smarty/"
+    },
     "require": {
         "php": "^8.1",
         "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/view": "^10.0|^11.0|^12.0|^13.0",
         "smarty/smarty": "^5.4"
+    },
+    "suggest": {
+        "laravel/pennant": "Required for the {feature} block and the feature_active modifier"
     },
     "require-dev": {
         "driftingly/rector-laravel": "^2.0",

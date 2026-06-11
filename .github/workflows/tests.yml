@@ -5,6 +5,14 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
+# Stacked pushes to the same branch supersede in-flight matrix runs.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,9 +24,13 @@ jobs:
           - { laravel: '10.0', testbench: '8.0', php: '8.1' }
           - { laravel: '10.0', testbench: '8.0', php: '8.2' }
           - { laravel: '10.0', testbench: '8.0', php: '8.3' }
+          # PHP floors: Laravel 11 and 12 both support PHP 8.2 — without
+          # these rows the claimed floor was never tested.
+          - { laravel: '11.0', testbench: '9.0', php: '8.2' }
           - { laravel: '11.0', testbench: '9.0', php: '8.3' }
           - { laravel: '11.0', testbench: '9.0', php: '8.4' }
           - { laravel: '11.0', testbench: '9.0', php: '8.5' }
+          - { laravel: '12.0', testbench: '10.0', php: '8.2' }
           - { laravel: '12.0', testbench: '10.0', php: '8.3' }
           - { laravel: '12.0', testbench: '10.0', php: '8.4' }
           - { laravel: '12.0', testbench: '10.0', php: '8.5' }
@@ -48,10 +60,14 @@ jobs:
           coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
           tools: composer:v2
 
+      - name: Determine composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Composer dependencies
         uses: actions/cache@v5
         with:
-          path: ~/.composer/cache/files
+          path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-php${{ matrix.php }}-laravel${{ matrix.laravel }}-${{ hashFiles('composer.json') }}
           restore-keys: |
             composer-php${{ matrix.php }}-laravel${{ matrix.laravel }}-
@@ -102,10 +118,14 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - name: Determine composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Composer dependencies
         uses: actions/cache@v5
         with:
-          path: ~/.composer/cache/files
+          path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-static-analysis-${{ hashFiles('composer.json') }}
           restore-keys: |
             composer-static-analysis-
@@ -121,3 +141,22 @@ jobs:
 
       - name: Run Pint (test mode)
         run: vendor/bin/pint --test
+
+  # Single stable check name for branch protection: requiring this one
+  # job keeps protection valid as matrix cells come and go, instead of
+  # enumerating every "PHP x / Laravel y" check by hand. `if: always()`
+  # + explicit result checks, because a plain `needs:` job is *skipped*
+  # (not failed) when a dependency fails — and GitHub treats a skipped
+  # required check as passing.
+  tests-passed:
+    name: Tests passed
+    if: always()
+    needs: [test, static-analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.static-analysis.result }}" != "success" ]; then
+            echo "test=${{ needs.test.result }} static-analysis=${{ needs.static-analysis.result }}"
+            exit 1
+          fi

@@ -41,6 +41,14 @@ Blade-parity feature release.
   `--expire` instead of casting it to 0 — which meant "clear
   everything", the opposite of the narrow clear the typo intended.
 
+### Packaging
+
+- `.gitattributes` with `export-ignore`: dist installs (`composer
+  require`) no longer ship tests/, docs/, CI workflows and tooling
+  configs.
+- composer.json metadata: `keywords`, `homepage`, `authors`, `support`,
+  and `suggest: laravel/pennant`.
+
 ### Documentation
 
 - A stacks recipe (`{capture append=}`) covering the `@push`/`@stack`
