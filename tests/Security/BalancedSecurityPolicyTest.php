@@ -33,7 +33,7 @@ class BalancedSecurityPolicyTest extends TestCase
     public function test_php_tag_is_blocked(): void
     {
         $this->expectException(ViewException::class);
-        $this->expectExceptionMessageMatches('/php.*not allowed|disabled/i');
+        $this->expectExceptionMessageMatches('/php.*(not allowed|disabled)/i');
 
         view('security_php')->render();
     }
@@ -41,7 +41,7 @@ class BalancedSecurityPolicyTest extends TestCase
     public function test_math_tag_is_blocked(): void
     {
         $this->expectException(ViewException::class);
-        $this->expectExceptionMessageMatches('/math.*not allowed|disabled/i');
+        $this->expectExceptionMessageMatches('/math.*(not allowed|disabled)/i');
 
         view('security_math')->render();
     }

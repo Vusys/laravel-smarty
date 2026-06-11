@@ -27,6 +27,20 @@ Blade-parity feature release.
   methods with extra parameters. `model=` stays as the single-model
   shorthand.
 
+### Fixed
+
+- **`smarty:optimize --force` actually forces recompiles.** Upstream
+  `compileAll()` copies its force argument onto a clone it never uses,
+  so `--force` silently no-opped whenever `smarty.force_compile` was
+  off — i.e. in production, exactly where a deploy hook runs it. The
+  command now toggles the live instance around the call.
+- **`smarty:optimize` exits non-zero when templates fail to compile**
+  (the vendor API swallows per-template exceptions), so deploy
+  pipelines can gate on pre-compilation.
+- `smarty:clear-cache` / `smarty:clear-compiled` reject a non-numeric
+  `--expire` instead of casting it to 0 — which meant "clear
+  everything", the opposite of the narrow clear the typo intended.
+
 ### Documentation
 
 - A stacks recipe (`{capture append=}`) covering the `@push`/`@stack`

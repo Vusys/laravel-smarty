@@ -41,7 +41,7 @@ class StrictSecurityPolicyTest extends TestCase
     public function test_fetch_tag_is_blocked(): void
     {
         $this->expectException(ViewException::class);
-        $this->expectExceptionMessageMatches('/fetch.*not allowed|disabled/i');
+        $this->expectExceptionMessageMatches('/fetch.*(not allowed|disabled)/i');
 
         view('security_fetch')->render();
     }
@@ -49,7 +49,7 @@ class StrictSecurityPolicyTest extends TestCase
     public function test_eval_tag_is_blocked(): void
     {
         $this->expectException(ViewException::class);
-        $this->expectExceptionMessageMatches('/eval.*not allowed|disabled/i');
+        $this->expectExceptionMessageMatches('/eval.*(not allowed|disabled)/i');
 
         view('security_eval', ['body' => 'hello'])->render();
     }

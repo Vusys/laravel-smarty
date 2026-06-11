@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
+use Composer\Autoload\ClassLoader;
 use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginScanner;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\BadAttributeTypeModifier;
@@ -262,6 +263,63 @@ class PluginScannerTest extends TestCase
             PluginScanner::fingerprintInputs([], []),
             $withGhostFirst,
         );
+    }
+
+    public function test_namespace_spanning_multiple_directories_scans_all_of_them(): void
+    {
+        // Composer permits one PSR-4 prefix to map to several roots
+        // (["src/", "modules/"]). The scan must iterate every resolved
+        // directory — a `break` after the first would silently drop
+        // half the app's plugins.
+        $this->registerMultiDirNamespace();
+
+        $descriptors = PluginScanner::scan(['Vusys\\LaravelSmarty\\Tests\\Fixtures\\MultiDir'], []);
+
+        $names = array_map(static fn ($d) => $d->name, $descriptors);
+
+        $this->assertContains('alpha', $names);
+        $this->assertContains('beta', $names);
+    }
+
+    public function test_fingerprint_covers_every_directory_of_a_multi_root_namespace(): void
+    {
+        // The cache-invalidation fingerprint has the same multi-root
+        // obligation as the scan: an edit in the *second* directory
+        // must change the hash, or stale caches survive plugin edits.
+        $this->registerMultiDirNamespace();
+
+        $namespace = 'Vusys\\LaravelSmarty\\Tests\\Fixtures\\MultiDir';
+        $before = PluginScanner::fingerprintInputs([$namespace], []);
+
+        $file = __DIR__.'/../../Fixtures/MultiDirB/BetaModifier.php';
+        $original = filemtime($file);
+        $this->assertIsInt($original);
+
+        try {
+            touch($file, $original + 2);
+            clearstatcache(true, $file);
+
+            $this->assertNotSame($before, PluginScanner::fingerprintInputs([$namespace], []));
+        } finally {
+            touch($file, $original);
+            clearstatcache(true, $file);
+        }
+    }
+
+    private function registerMultiDirNamespace(): void
+    {
+        foreach (spl_autoload_functions() as $autoloader) {
+            if (is_array($autoloader) && $autoloader[0] instanceof ClassLoader) {
+                // addPsr4 appends on repeat calls; the scanner's
+                // directory dedupe makes that harmless.
+                $autoloader[0]->addPsr4('Vusys\\LaravelSmarty\\Tests\\Fixtures\\MultiDir\\', [
+                    __DIR__.'/../../Fixtures/MultiDirA',
+                    __DIR__.'/../../Fixtures/MultiDirB',
+                ]);
+
+                return;
+            }
+        }
     }
 
     public function test_non_php_files_in_scanned_directory_are_ignored(): void
