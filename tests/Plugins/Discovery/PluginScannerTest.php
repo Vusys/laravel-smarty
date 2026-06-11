@@ -86,9 +86,14 @@ class PluginScannerTest extends TestCase
     {
         // `Modifier` ends in "Modifier" (so the type resolves) but strips
         // to an empty name — registering a nameless tag would be unusable,
-        // so the scanner fails loud instead.
+        // so the scanner fails loud instead. Pin the whole message so a
+        // reordered or dropped concat segment is caught.
         $this->expectException(PluginRegistrationException::class);
-        $this->expectExceptionMessage('derives an empty modifier name');
+        $this->expectExceptionMessage(
+            'Class '.EmptyNameDerivedModifier::class.' derives an empty modifier name from its classname. '
+            .'Give it a longer name (e.g. SinceModifier, not just Modifier), or '
+            .'declare a public $name property / #[SmartyPlugin(name: ...)] attribute.'
+        );
 
         PluginScanner::resolveDescriptor(EmptyNameDerivedModifier::class);
     }
