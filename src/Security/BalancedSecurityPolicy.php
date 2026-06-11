@@ -10,7 +10,7 @@ use Smarty\Security;
  * Sensible default \Smarty\Security policy for templates authored by
  * trusted parties — typically developers and admins editing CMS templates.
  *
- * Blocks the obvious server-side execution vectors (`{php}`, `{math}`,
+ * Blocks the obvious server-side execution vectors (`{math}`,
  * super-globals, arbitrary static-class access) while leaving common
  * formatting affordances (modifiers, constants) alone so admin-authored
  * templates aren't mysteriously broken.
@@ -37,9 +37,12 @@ class BalancedSecurityPolicy extends Security
      * `array_merge($this->disabled_tags, …)` that would silently drop
      * Balanced bans if a user-subclass shadowed the property.
      *
-     * `{php}` is a raw PHP block — the largest single RCE vector.
-     * `{math}` evaluates its `equation` argument with `eval()` (see
-     * Smarty's Math.php); even with input filtering, no admin needs that.
+     * `{php}` was Smarty 3's raw-PHP block and the largest single RCE
+     * vector; Smarty 5 removed the tag entirely, so banning it here is a
+     * defensive no-op that also documents intent and guards against a
+     * future re-introduction. `{math}` does still exist and evaluates its
+     * `equation` argument with `eval()` (see Smarty's Math.php); even with
+     * input filtering, no admin needs that.
      */
     public const CORE_DISABLED_TAGS = ['php', 'math'];
 

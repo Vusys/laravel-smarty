@@ -10,9 +10,14 @@ use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 
 /**
  * Installs a list of discovered plugin descriptors onto a Smarty
- * instance. The plugin object itself is resolved through the container
- * lazily (on first invocation per render), which keeps the per-render
- * registration cost flat — unused plugins never get instantiated.
+ * instance. Registration only stores a closure per descriptor, so the
+ * per-render registration cost is flat and a plugin that no template
+ * uses is never instantiated. The plugin object is resolved through the
+ * container inside that closure on *every* invocation — not memoized —
+ * so a modifier inside a large loop pays one `app()->make()` per
+ * iteration. That's fine for ordinary use; memoizing would have to be
+ * Octane-aware, so it's deferred until a hot loop actually measures as a
+ * cost.
  *
  * Collisions inside the discovered set throw rather than silently
  * shadow: if two classes both end up registered as `(modifier, since)`,

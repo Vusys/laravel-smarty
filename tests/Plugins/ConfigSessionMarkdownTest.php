@@ -28,6 +28,28 @@ class ConfigSessionMarkdownTest extends TestCase
         $this->assertStringContainsString('markdown=<p><strong>bold</strong></p>', $output);
     }
 
+    public function test_array_config_and_session_render_empty_inline_but_assign_intact(): void
+    {
+        // An array value emitted inline would echo "Array" and raise a PHP
+        // "Array to string conversion" warning; it should render '' instead.
+        // `assign=` is the supported path for pulling the array into scope.
+        Config::set('app.array_val', ['x', 'y']);
+        Config::set('app.scalar_val', 'PINNED');
+        Session::start();
+        Session::put('array_val', ['a', 'b']);
+
+        $output = view('config_session_array')->render();
+
+        $this->assertStringContainsString('inline_config=[]', $output);
+        $this->assertStringContainsString('inline_session=[]', $output);
+        // An `assign=` tag emits nothing inline even for a scalar value —
+        // the value goes to the variable, not the output.
+        $this->assertStringContainsString('assign_scalar=[]', $output);
+        $this->assertStringContainsString('assigned_config=x-y', $output);
+        $this->assertStringContainsString('assigned_scalar=PINNED', $output);
+        $this->assertStringNotContainsString('Array', $output);
+    }
+
     public function test_shared_session_renders_real_session_value(): void
     {
         Session::start();

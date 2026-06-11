@@ -7,6 +7,7 @@ namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 use Composer\Autoload\ClassLoader;
 use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginScanner;
+use Vusys\LaravelSmarty\Tests\Fixtures\EmptyNamePlugin\Modifier as EmptyNameDerivedModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\BadAttributeTypeModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\TickFunction;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AbstractBaseModifier;
@@ -79,6 +80,22 @@ class PluginScannerTest extends TestCase
 
         $this->assertNotNull($descriptor);
         $this->assertSame('empty_name', $descriptor->name);
+    }
+
+    public function test_classname_equal_to_its_type_suffix_throws(): void
+    {
+        // `Modifier` ends in "Modifier" (so the type resolves) but strips
+        // to an empty name — registering a nameless tag would be unusable,
+        // so the scanner fails loud instead. Pin the whole message so a
+        // reordered or dropped concat segment is caught.
+        $this->expectException(PluginRegistrationException::class);
+        $this->expectExceptionMessage(
+            'Class '.EmptyNameDerivedModifier::class.' derives an empty modifier name from its classname. '
+            .'Give it a longer name (e.g. SinceModifier, not just Modifier), or '
+            .'declare a public $name property / #[SmartyPlugin(name: ...)] attribute.'
+        );
+
+        PluginScanner::resolveDescriptor(EmptyNameDerivedModifier::class);
     }
 
     public function test_attribute_takes_precedence_over_classname_convention(): void

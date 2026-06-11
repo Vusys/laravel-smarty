@@ -35,9 +35,11 @@ class LineTrackingCompiler extends SmartyTemplateCompiler
      * @param  string  $tag
      * @param  array<string, mixed>  $args
      * @param  array<string, mixed>  $parameter
-     * @return string|false
+     * @return string Smarty 5's parent::compileTag() is documented and
+     *                typed `@return string` (never false, unlike the
+     *                Smarty 3 era), so no false-return guard is needed.
      */
-    public function compileTag($tag, $args, $parameter = [])
+    public function compileTag($tag, $args, $parameter = []): string
     {
         // Capture lexer line BEFORE descending into the tag's compile —
         // nested compileTag calls advance the lexer cursor. Smarty's
