@@ -149,7 +149,7 @@ The class still has to either carry `#[SmartyPlugin]` or end in a recognised suf
 | `LaravelSmarty::registerPluginClass($class)` | Register a single class outside any scanned namespace. |
 | `LaravelSmarty::rebuildDiscoveryCache()` | Force a fresh scan and rewrite the on-disk cache. Backs the `smarty:plugins:cache` command; also handy from a deploy hook that needs the rebuild inline. |
 | `LaravelSmarty::flushDiscoveredCache()` | Drop in-memory and on-disk discovery state. Backs `smarty:plugins:clear`. Tests use this to isolate plugin state between cases. |
-| `LaravelSmarty::namespaces()` / `manualClasses()` | Read-only introspection of what's currently registered. Useful in debugging and in service-provider assertions. |
+| `LaravelSmarty::namespaces()` | Read-only introspection of the namespaces currently registered for scanning (config + programmatic). Useful in debugging and in service-provider assertions. |
 
 ### Discovery cache
 

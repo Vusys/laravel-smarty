@@ -54,6 +54,13 @@ Blade-parity feature release.
 - A stacks recipe (`{capture append=}`) covering the `@push`/`@stack`
   use case, with a clear note that `{push}`/`{stack}` was evaluated and
   won't be added.
+- New troubleshooting page (stale compiles after deploys,
+  `ReservedTemplateVariable`, escaping surprises, Octane notes
+  consolidated); a real docs landing page; root `SECURITY.md`
+  (vulnerability disclosure — distinct from the sandboxing docs) and
+  `CONTRIBUTING.md`; README links the docs site, drops the redundant
+  `|escape` from the quick start, and gains Packagist badges;
+  `configuration.md` documents `plugin_namespaces`.
 
 ## [Unreleased — 0.22.0]
 

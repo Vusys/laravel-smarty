@@ -1,5 +1,10 @@
 # Security policy
 
+!!! note "Reporting a vulnerability?"
+    This page is about *sandboxing templates*. To report a security issue in the
+    package itself, see [SECURITY.md](https://github.com/Vusys/laravel-smarty/blob/master/SECURITY.md)
+    in the repository root.
+
 Smarty templates can do a lot at runtime — raw `{php}` blocks, `{math equation=...}` (which `eval()`s its argument), `{fetch file=...}` (which reads files and URLs), `$_SERVER` / `$_GET` access, arbitrary static-class calls. For dev-authored templates that's fine. For anything where templates come from CMS admins, partners, or end users, those features are footguns.
 
 The package ships two `\Smarty\Security` subclasses you can opt into with one config line:

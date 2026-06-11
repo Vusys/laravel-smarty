@@ -1,5 +1,7 @@
 # vusys/laravel-smarty
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/vusys/laravel-smarty.svg)](https://packagist.org/packages/vusys/laravel-smarty)
+[![Total Downloads](https://img.shields.io/packagist/dt/vusys/laravel-smarty.svg)](https://packagist.org/packages/vusys/laravel-smarty)
 [![Tests](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml/badge.svg)](https://github.com/Vusys/laravel-smarty/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/Vusys/laravel-smarty/graph/badge.svg)](https://codecov.io/gh/Vusys/laravel-smarty)
 [![Mutation testing](https://img.shields.io/endpoint?style=flat&url=https://badge-api.stryker-mutator.io/github.com/Vusys/laravel-smarty/master)](https://dashboard.stryker-mutator.io/reports/github.com/Vusys/laravel-smarty/master)
@@ -12,6 +14,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Replace Blade with [Smarty 5](https://www.smarty.net/) as the default view engine in a Laravel application.
+
+**📚 Full documentation: [vusys.github.io/laravel-smarty](https://vusys.github.io/laravel-smarty/)**
 
 ## Requirements
 
@@ -50,12 +54,14 @@ Create `resources/views/welcome.tpl`:
 ```smarty
 <!doctype html>
 <html lang="en">
-<head><title>{$title|escape}</title></head>
+<head><title>{$title}</title></head>
 <body>
-  <h1>Hello, {$name|escape}!</h1>
+  <h1>Hello, {$name}!</h1>
 </body>
 </html>
 ```
+
+`{$var}` output is HTML-escaped automatically (`escape_html` is on by default), matching Blade's `{{ }}` — no `|escape` needed. Use `{$var nofilter}` where you deliberately want raw output.
 
 Render it like any Laravel view:
 
@@ -82,6 +88,7 @@ Smarty resolves before Blade, so a `welcome.tpl` overrides an existing `welcome.
 | [Custom plugins](docs/custom-plugins.md) | File-based plugins, class-backed discovery, and the discovery cache. |
 | [Artisan commands](docs/artisan.md) | `smarty:optimize`, the clear-* commands, and the plugin discovery cache commands. |
 | [Laravel integration](docs/laravel-integration.md) | View composers, Debugbar/Telescope, and `.tpl` source-line error mapping. |
+| [Troubleshooting](docs/troubleshooting.md) | Stale compiles after deploys, `ReservedTemplateVariable`, escaping surprises, Octane notes. |
 | [Development](docs/development.md) | Running tests, static analysis, code style. |
 
 ## License

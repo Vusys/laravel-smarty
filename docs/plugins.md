@@ -263,7 +263,7 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 
 | Modifier | Equivalent |
 |----------|------------|
-| `\|currency:$in:$locale:$precision` | `Number::currency($value, $in, $locale, $precision)` |
+| `\|currency:$in:$locale:$precision` | `Number::currency($value, $in, $locale, $precision)` — the `$precision` argument needs Laravel ≥ 11.30 (`Number::currency()` had no precision parameter before that); on older versions it is silently ignored |
 | `\|file_size:$precision:$maxPrecision` | `Number::fileSize($bytes, $precision, $maxPrecision)` |
 | `\|percentage:$precision:$maxPrecision:$locale` | `Number::percentage($value, $precision, $maxPrecision, $locale)` |
 | `\|abbreviate:$precision:$maxPrecision` | `Number::abbreviate($value, $precision, $maxPrecision)` |
@@ -300,7 +300,7 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 <script>window.__APP_CONFIG = {$config|json};</script>
 ```
 
-`$session` is one of four auto-shared wrapper objects — see [Auto-shared wrapper objects](wrapper-objects.md) for the full surface (`$auth`, `$request`, `$session`, `$route`).
+`$session` is one of five auto-shared wrapper objects — see [Auto-shared wrapper objects](wrapper-objects.md) for the full surface (`$auth`, `$request`, `$session`, `$route`, `$errors`).
 
 | Tag/modifier | Equivalent |
 |--------------|------------|
