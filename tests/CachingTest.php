@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Tests;
 
 use Illuminate\Foundation\Vite;
@@ -9,7 +11,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\HtmlString;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Number;
 use Illuminate\Support\ViewErrorBag;
@@ -17,6 +18,7 @@ use Smarty\Smarty;
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\SmartyFactory;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\TickFunction;
+use Vusys\LaravelSmarty\Tests\Fixtures\FakeVite;
 
 /**
  * Smarty caching=true serves rendered output from disk on cache hits, so any
@@ -38,8 +40,8 @@ class CachingTest extends TestCase
 
     protected function tearDown(): void
     {
-        SmartyFactory::flushConfigurators();
-        LaravelSmarty::flushDiscoveredCache();
+        // Configurator/discovery statics are flushed by the base class;
+        // only the fixture counter is ours to reset.
         TickFunction::$count = 0;
 
         parent::tearDown();
@@ -69,6 +71,19 @@ class CachingTest extends TestCase
         $this->assertStringContainsString('count=1', $first);
         $this->assertSame($first, $second);
         $this->assertSame(1, $count, 'Second render must be served from the output cache, not re-run the plugin.');
+    }
+
+    public function test_escaped_output_stays_escaped_through_the_cache(): void
+    {
+        // escape_html runs at render time; the cache stores the already-
+        // escaped bytes. A cache hit must serve them verbatim — neither
+        // unescaped nor double-escaped.
+        $first = view('escape', ['payload' => '<b>x</b>'])->render();
+        $second = view('escape', ['payload' => '<i>y</i>'])->render();
+
+        $this->assertStringContainsString('&lt;b&gt;x&lt;/b&gt;', $first);
+        $this->assertSame($first, $second, 'Plain {$var} output is cacheable — the second render is a cache hit.');
+        $this->assertStringNotContainsString('&amp;lt;', $second);
     }
 
     public function test_rendered_template_is_reported_cached(): void
@@ -183,7 +198,6 @@ class CachingTest extends TestCase
         Session::regenerateToken();
         $second = view('csrf_field')->render();
         $this->assertStringContainsString('value="'.Session::token().'"', $second);
-        $this->assertStringNotContainsString('value="'.csrf_token().'_x"', $second);
     }
 
     public function test_csrf_token_re_evaluates_on_cache_hit(): void
@@ -387,36 +401,16 @@ class CachingTest extends TestCase
 
     public function test_vite_calls_re_evaluate_on_cache_hit(): void
     {
-        $fake = new class extends Vite
-        {
-            public int $calls = 0;
-
-            public int $refreshCalls = 0;
-
-            public function __invoke($entrypoints, $buildDirectory = null): HtmlString
-            {
-                $this->calls++;
-
-                return new HtmlString('<vite-'.$this->calls.'>');
-            }
-
-            public function reactRefresh(): HtmlString
-            {
-                $this->refreshCalls++;
-
-                return new HtmlString('<refresh-'.$this->refreshCalls.'>');
-            }
-        };
-
+        $fake = new FakeVite;
         $this->app->instance(Vite::class, $fake);
 
         $first = view('cache_vite')->render();
         $second = view('cache_vite')->render();
 
-        $this->assertSame(2, $fake->calls);
+        $this->assertCount(2, $fake->calls);
         $this->assertSame(2, $fake->refreshCalls);
-        $this->assertStringContainsString('<vite-1>', $first);
-        $this->assertStringContainsString('<vite-2>', $second);
+        $this->assertStringContainsString('<vite-tags 1>', $first);
+        $this->assertStringContainsString('<vite-tags 2>', $second);
         $this->assertStringContainsString('<refresh-1>', $first);
         $this->assertStringContainsString('<refresh-2>', $second);
     }

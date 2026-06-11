@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Tests\Console;
 
 use Illuminate\Filesystem\Filesystem;
@@ -31,8 +33,22 @@ class ClearCompiledCommandTest extends TestCase
 
         // --file= must scope the clear to one template; the other compiled
         // output stays. Without the option pass-through this falls back to
-        // clearAll() and both files vanish.
-        $this->assertCount(1, $files->files($this->compilePath));
+        // clearAll() and both files vanish. Pinning the survivor's identity
+        // (not just the count) catches a clear that removed the wrong file.
+        $remaining = $files->files($this->compilePath);
+        $this->assertCount(1, $remaining);
+        $this->assertStringContainsString('loop.tpl', $remaining[0]->getFilename());
+    }
+
+    public function test_non_numeric_expire_is_rejected(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+
+        $this->artisan('smarty:clear-compiled', ['--expire' => 'abc'])
+            ->expectsOutputToContain('Invalid --expire')
+            ->assertExitCode(2);
+
+        $this->assertCount(1, (new Filesystem)->files($this->compilePath));
     }
 
     public function test_empty_file_option_still_clears_everything(): void

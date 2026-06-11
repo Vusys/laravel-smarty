@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
+use Illuminate\View\ViewException;
 use Vusys\LaravelSmarty\Exceptions\PluginRegistrationException;
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
@@ -147,8 +148,11 @@ class PluginAutoDiscoveryTest extends TestCase
         // suffix, an empty config + no programmatic namespace + no
         // manual class means nothing is registered — and a template
         // that uses {$x|since} fails at compile because Smarty can't
-        // resolve the modifier.
-        $this->expectException(\Throwable::class);
+        // resolve the modifier. The engine remaps the CompilerException
+        // into a ViewException carrying the "unknown modifier" message —
+        // pinning that keeps this from green-lighting unrelated crashes.
+        $this->expectException(ViewException::class);
+        $this->expectExceptionMessageMatches("/unknown modifier 'since'/");
 
         view('discovery')->render();
     }

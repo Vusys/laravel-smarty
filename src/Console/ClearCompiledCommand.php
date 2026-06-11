@@ -25,7 +25,15 @@ class ClearCompiledCommand extends Command
         $engine = $resolver->resolve('smarty');
         $smarty = $engine->smarty();
 
-        $expire = $this->option('expire') !== null ? (int) $this->option('expire') : null;
+        // Same guard as smarty:clear-cache — `--expire=abc` casting to 0
+        // would clear everything instead of nothing.
+        $expireOption = $this->option('expire');
+        if (is_string($expireOption) && ! ctype_digit($expireOption)) {
+            $this->error("Invalid --expire value [{$expireOption}]; expected a non-negative number of seconds.");
+
+            return self::INVALID;
+        }
+        $expire = $expireOption !== null ? (int) $expireOption : null;
         $file = $this->option('file');
         $compileId = $this->option('compile-id');
 

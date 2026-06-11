@@ -1,10 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Tests;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use Vusys\LaravelSmarty\LaravelSmarty;
+use Vusys\LaravelSmarty\Plugins\BlockState;
+use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
+use Vusys\LaravelSmarty\SmartyFactory;
 use Vusys\LaravelSmarty\SmartyServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
@@ -24,7 +30,30 @@ abstract class TestCase extends OrchestraTestCase
         (new Filesystem)->deleteDirectory($this->compilePath);
         (new Filesystem)->deleteDirectory($this->cachePath);
 
+        // Without an override, PluginCacheStore writes into the *shared
+        // vendor testbench skeleton's* bootstrap/cache/, persisting
+        // across tests and across whole suite runs. Point it at a
+        // per-process temp file instead; tests that need their own path
+        // (PluginCacheStoreTest) re-override after this.
+        $pluginCacheDir = sys_get_temp_dir().'/laravel-smarty-tests/plugin-cache-'.getmypid();
+        @mkdir($pluginCacheDir, 0o755, true);
+        PluginCacheStore::$pathOverride = $pluginCacheDir.'/laravel-smarty-plugins.php';
+
         parent::setUp();
+    }
+
+    protected function tearDown(): void
+    {
+        // Orchestra rebuilds the app per test, but these statics live
+        // for the PHP process's lifetime — flush them all here,
+        // unconditionally, so no test depends on the previous test's
+        // discipline (and random execution order stays viable).
+        LaravelSmarty::flushDiscoveredCache();
+        SmartyFactory::flushConfigurators();
+        BlockState::reset();
+        PluginCacheStore::$pathOverride = null;
+
+        parent::tearDown();
     }
 
     protected function getPackageProviders($app): array

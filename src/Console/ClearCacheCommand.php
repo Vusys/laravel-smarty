@@ -26,7 +26,15 @@ class ClearCacheCommand extends Command
         $engine = $resolver->resolve('smarty');
         $smarty = $engine->smarty();
 
-        $expire = $this->option('expire') !== null ? (int) $this->option('expire') : null;
+        // `--expire=abc` would otherwise cast to 0 — which means "clear
+        // everything", the opposite of what a typo'd narrow clear wants.
+        $expireOption = $this->option('expire');
+        if (is_string($expireOption) && ! ctype_digit($expireOption)) {
+            $this->error("Invalid --expire value [{$expireOption}]; expected a non-negative number of seconds.");
+
+            return self::INVALID;
+        }
+        $expire = $expireOption !== null ? (int) $expireOption : null;
         $file = $this->option('file');
         $cacheId = $this->option('cache-id');
         $compileId = $this->option('compile-id');

@@ -25,8 +25,17 @@ jobs:
           - { laravel: '13.0', testbench: '11.0', php: '8.3' }
           - { laravel: '13.0', testbench: '11.0', php: '8.4', coverage: true }
           - { laravel: '13.0', testbench: '11.0', php: '8.5' }
+          # Dependency-floor canaries. `lowest` resolves the oldest
+          # dependency set composer.json permits — catching floors that
+          # have silently rotted below what the code actually needs. The
+          # smarty pin holds the minimum supported Smarty minor: the
+          # package reflects into Smarty internals (BridgedSmarty injects
+          # the compiler), so both directions of upstream drift deserve a
+          # cell.
+          - { laravel: '10.0', testbench: '8.0', php: '8.1', stability: 'lowest' }
+          - { laravel: '13.0', testbench: '11.0', php: '8.4', smarty: '5.4.*' }
 
-    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}${{ matrix.stability == 'lowest' && ' (lowest deps)' || '' }}${{ matrix.smarty && format(' (smarty {0})', matrix.smarty) || '' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -60,8 +69,12 @@ jobs:
           composer remove --dev --no-update larastan/larastan rector/rector driftingly/rector-laravel laravel/pint infection/infection
           composer require --dev --no-update "laravel/framework:^${{ matrix.laravel }}" "orchestra/testbench:^${{ matrix.testbench }}"
 
+      - name: Pin Smarty version
+        if: matrix.smarty
+        run: composer require --no-update "smarty/smarty:${{ matrix.smarty }}"
+
       - name: Install dependencies
-        run: composer update --prefer-dist --no-interaction --no-progress
+        run: composer update --prefer-dist --no-interaction --no-progress ${{ matrix.stability == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
 
       - name: Run tests
         run: vendor/bin/phpunit ${{ matrix.coverage && '--coverage-clover=coverage.xml' || '' }}

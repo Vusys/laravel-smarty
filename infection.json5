@@ -1,11 +1,11 @@
 {
     // Mutation testing config for Infection.
     //
-    // Thresholds are deliberately 0 on first commit — the workflow
-    // reports the baseline MSI / Covered-MSI in the PR comment. Once
-    // we have a measured number, ratchet `minMsi` / `minCoveredMsi`
-    // up to one or two points below it so regressions fail CI but
-    // genuine new mutators don't.
+    // Thresholds ratchet: they sit a couple of points below the measured
+    // baseline (≈93% MSI as of 2026-06) so real regressions fail CI but
+    // mutator-set churn and equivalent-mutant noise don't. Raise them as
+    // the measured number settles higher; never lower them to make a
+    // red run green.
     $schema: "vendor/infection/infection/resources/schema.json",
     source: {
         directories: ["src"],
@@ -28,8 +28,8 @@
     mutators: {
         "@default": true,
     },
-    minMsi: 0,
-    minCoveredMsi: 0,
+    minMsi: 90,
+    minCoveredMsi: 90,
     testFramework: "phpunit",
     tmpDir: "build/infection",
 }

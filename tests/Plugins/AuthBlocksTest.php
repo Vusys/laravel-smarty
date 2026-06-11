@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Tests\Plugins;
 
 use Illuminate\Contracts\Auth\Authenticatable;

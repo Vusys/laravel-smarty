@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Vusys\LaravelSmarty\Tests\Console;
 
 use Illuminate\Filesystem\Filesystem;
@@ -42,8 +44,42 @@ class ClearCacheCommandTest extends TestCase
 
         // --file= must narrow the operation to one template's cache. Without
         // the option pass-through this falls back to clearAllCache() and
-        // both cached outputs vanish.
-        $this->assertCount(1, $files->allFiles($this->cachePath));
+        // both cached outputs vanish. Pinning the survivor's identity (not
+        // just the count) catches a clear that removed the *wrong* file.
+        $remaining = $files->allFiles($this->cachePath);
+        $this->assertCount(1, $remaining);
+        $this->assertStringContainsString('loop.tpl', $remaining[0]->getFilename());
+    }
+
+    public function test_cache_id_option_narrows_the_clear(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+        view('loop', ['items' => ['one']])->render();
+
+        $files = new Filesystem;
+        $this->assertCount(2, $files->allFiles($this->cachePath));
+
+        // Nothing was cached under cache_id=nope, so a properly
+        // passed-through cache-id clears 0 entries. A mutant nulling the
+        // argument widens the clear to every cache_id for hello.tpl.
+        $this->artisan('smarty:clear-cache', ['--file' => 'hello.tpl', '--cache-id' => 'nope'])
+            ->expectsOutputToContain('Cleared 0 Smarty cache file(s).')
+            ->assertSuccessful();
+
+        $this->assertCount(2, $files->allFiles($this->cachePath));
+    }
+
+    public function test_non_numeric_expire_is_rejected(): void
+    {
+        view('hello', ['name' => 'World'])->render();
+
+        // `--expire=abc` used to cast to 0 — "clear everything", the
+        // opposite of the narrow clear the typo intended.
+        $this->artisan('smarty:clear-cache', ['--expire' => 'abc'])
+            ->expectsOutputToContain('Invalid --expire')
+            ->assertExitCode(2);
+
+        $this->assertCount(1, (new Filesystem)->allFiles($this->cachePath));
     }
 
     public function test_empty_file_option_still_clears_everything(): void

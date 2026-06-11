@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
+use Composer\Autoload\ClassLoader;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginDescriptor;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
@@ -306,11 +307,24 @@ class PluginCacheStoreTest extends TestCase
 
     public function test_load_returns_null_when_a_new_php_file_appears_in_a_scanned_namespace(): void
     {
-        // Real namespace that resolves to disk so the file-content layer
-        // of the fingerprint actually walks something. Drop a probe .php
-        // file into the directory after storing — the cache should now
-        // be considered stale because a class might have been added.
-        $namespaces = ['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'];
+        // A throwaway namespace mapped to a temp directory, so the probe
+        // file never touches the tracked fixtures tree (where a SIGKILL
+        // between write and unlink would leave a stray that flips the
+        // count-sensitive scanner tests). The temp dir still exercises
+        // the same fingerprint layer: new .php file → stale cache.
+        $dir = sys_get_temp_dir().'/laravel-smarty-tests/probe-namespace';
+        @mkdir($dir, 0o755, true);
+        array_map(unlink(...), glob($dir.'/*.php') ?: []);
+        file_put_contents($dir.'/ExistingModifier.php', "<?php\n");
+
+        foreach (spl_autoload_functions() as $autoloader) {
+            if (is_array($autoloader) && $autoloader[0] instanceof ClassLoader) {
+                $autoloader[0]->addPsr4('Vusys\\LaravelSmarty\\Tests\\ProbeNamespace\\', [$dir]);
+                break;
+            }
+        }
+
+        $namespaces = ['Vusys\\LaravelSmarty\\Tests\\ProbeNamespace'];
 
         PluginCacheStore::store($namespaces, [], [
             new PluginDescriptor('modifier', 'since', SinceModifier::class),
@@ -318,13 +332,12 @@ class PluginCacheStoreTest extends TestCase
 
         $this->assertNotNull(PluginCacheStore::load($namespaces, []));
 
-        $probe = __DIR__.'/../../Fixtures/Plugins/_TmpInvalidationProbe.php';
-        file_put_contents($probe, "<?php\n");
+        file_put_contents($dir.'/_TmpInvalidationProbe.php', "<?php\n");
 
         try {
             $this->assertNull(PluginCacheStore::load($namespaces, []));
         } finally {
-            @unlink($probe);
+            @unlink($dir.'/_TmpInvalidationProbe.php');
         }
     }
 
