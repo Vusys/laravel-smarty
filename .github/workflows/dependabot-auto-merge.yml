@@ -24,13 +24,15 @@ jobs:
       # (smarty/smarty, illuminate/*) can change template-facing
       # behaviour and gets a human review. `gh pr merge --auto` waits on
       # the "Tests passed" check required by branch protection.
-      - name: Approve and enable auto-merge
+      #
+      # No self-approve: GITHUB_TOKEN cannot approve PRs, and branch
+      # protection here requires the status check but not a review, so
+      # enabling auto-merge is enough.
+      - name: Enable auto-merge
         if: |
           steps.meta.outputs.update-type == 'version-update:semver-patch' ||
           (steps.meta.outputs.update-type == 'version-update:semver-minor' && steps.meta.outputs.dependency-type == 'direct:development')
-        run: |
-          gh pr review --approve "$PR_URL"
-          gh pr merge --auto --squash "$PR_URL"
+        run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
