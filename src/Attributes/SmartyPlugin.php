@@ -35,6 +35,17 @@ use Attribute;
 final class SmartyPlugin
 {
     /**
+     * The plugin type. Deliberately typed as a bare `string`, not the
+     * `'modifier'|'function'|'block'` union: PHP does not enforce the
+     * constructor's `@param` union when the attribute is instantiated via
+     * reflection, so an invalid `type:` written in userland source
+     * constructs happily and only surfaces at discovery time. Keeping the
+     * property `string` lets that runtime validation stay live (see
+     * PluginScanner::resolveDescriptor) instead of being seen as dead.
+     */
+    public readonly string $type;
+
+    /**
      * @param  'modifier'|'function'|'block'  $type
      * @param  bool  $cacheable  Set to false when the plugin's output
      *                           depends on request state (auth, session,
@@ -49,8 +60,10 @@ final class SmartyPlugin
      *                           appears in.
      */
     public function __construct(
-        public readonly string $type,
+        string $type,
         public readonly string $name,
         public readonly bool $cacheable = true,
-    ) {}
+    ) {
+        $this->type = $type;
+    }
 }
