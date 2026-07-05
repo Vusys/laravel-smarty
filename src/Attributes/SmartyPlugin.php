@@ -35,18 +35,15 @@ use Attribute;
 final class SmartyPlugin
 {
     /**
-     * The plugin type. Deliberately typed as a bare `string`, not the
-     * `'modifier'|'function'|'block'` union: PHP does not enforce the
-     * constructor's `@param` union when the attribute is instantiated via
-     * reflection, so an invalid `type:` written in userland source
-     * constructs happily and only surfaces at discovery time. Keeping the
-     * property `string` lets that runtime validation stay live (see
-     * PluginScanner::resolveDescriptor) instead of being seen as dead.
-     */
-    public readonly string $type;
-
-    /**
-     * @param  'modifier'|'function'|'block'  $type
+     * `$type` is intentionally a bare `string` and NOT annotated as the
+     * `'modifier'|'function'|'block'` union: PHP does not enforce a PHPDoc
+     * union when the attribute is built via reflection, so an invalid
+     * `type:` written in userland source (see the BadAttributeType*
+     * fixtures) constructs happily and can only be caught at discovery
+     * time by PluginScanner::resolveDescriptor. Narrowing the type here
+     * would make that runtime guard look like dead code to static
+     * analysis (Larastan) and invite its removal.
+     *
      * @param  bool  $cacheable  Set to false when the plugin's output
      *                           depends on request state (auth, session,
      *                           locale, current URL): under
@@ -60,10 +57,8 @@ final class SmartyPlugin
      *                           appears in.
      */
     public function __construct(
-        string $type,
+        public readonly string $type,
         public readonly string $name,
         public readonly bool $cacheable = true,
-    ) {
-        $this->type = $type;
-    }
+    ) {}
 }
