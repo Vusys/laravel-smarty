@@ -24,7 +24,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup PHP
         # SHA-pinned: this workflow holds a contents:write token, so a
