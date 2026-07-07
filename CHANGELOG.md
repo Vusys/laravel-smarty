@@ -5,6 +5,30 @@ All notable changes to this package are documented here. The format follows
 [semver](https://semver.org/) with the usual pre-1.0 caveat that minor
 releases may contain breaking changes (flagged below).
 
+## [0.22.0] - 2026-07-07
+
+Two plugin-discovery improvements: one class can now register under multiple
+tag names, and `smarty:plugins:cache` skips the mtime walk on every
+subsequent cold start.
+
+### Added
+
+- **`#[SmartyPlugin]` is now repeatable.** Stack the attribute to register
+  one class under multiple tag names or types — each instance is validated
+  and registered independently, so per-instance `cacheable` flags are
+  preserved. `PluginScanner::resolveDescriptor()` now returns
+  `list<PluginDescriptor>` (previously `?PluginDescriptor`); callers that
+  typed against the old return value will need updating.
+
+- **Trust-the-cache production mode for `smarty:plugins:cache`.** Running
+  `php artisan smarty:plugins:cache` now writes a *trusted* cache that
+  `PluginCacheStore::load()` accepts unconditionally — the mtime walk over
+  namespace directories is skipped on every cold start after this, mirroring
+  the `config:cache` / `route:cache` trade-off. On-demand caching (the
+  first cold-start write during a normal request) remains untrusted and
+  continues to self-invalidate when plugin files change. Old cache files
+  (pre-`trusted` key) default to untrusted with no migration step required.
+
 ## [0.21.1] - 2026-06-11
 
 A maintenance release clearing the post-review backlog: small correctness
