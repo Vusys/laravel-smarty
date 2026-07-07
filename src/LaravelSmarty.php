@@ -96,17 +96,26 @@ class LaravelSmarty
     }
 
     /**
-     * Force a fresh scan and rewrite the on-disk cache. Used by the
-     * `smarty:plugins:cache` console command.
+     * Force a fresh scan and rewrite the on-disk cache as a *trusted*
+     * cache. Used by the `smarty:plugins:cache` console command.
+     *
+     * A trusted cache is loaded by `PluginCacheStore::load()` without a
+     * fingerprint check (no mtime walk), so plugin changes take effect
+     * only after re-running `smarty:plugins:cache`. This mirrors the
+     * `config:cache` / `route:cache` trade-off.
      *
      * @return array<int, PluginDescriptor>
      */
     public static function rebuildDiscoveryCache(): array
     {
         self::$resolved = null;
-        PluginCacheStore::clear();
 
-        return self::resolveDescriptors();
+        $namespaces = self::namespaces();
+        $manualClasses = self::manualClasses();
+        $descriptors = PluginScanner::scan($namespaces, $manualClasses);
+        PluginCacheStore::store($namespaces, $manualClasses, $descriptors, trusted: true);
+
+        return self::$resolved = $descriptors;
     }
 
     /**

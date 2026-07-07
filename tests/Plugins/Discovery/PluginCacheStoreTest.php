@@ -397,4 +397,82 @@ class PluginCacheStoreTest extends TestCase
         // is the same: the path ends in our cache filename.
         $this->assertStringEndsWith('/cache/laravel-smarty-plugins.php', PluginCacheStore::path());
     }
+
+    public function test_trusted_cache_is_loaded_without_fingerprint_check(): void
+    {
+        // A trusted cache (written by smarty:plugins:cache) is accepted
+        // even when the fingerprint inputs change — the caller has opted in
+        // to the config:cache-style trade-off where cache accuracy is the
+        // deployer's responsibility, not the runtime's.
+        PluginCacheStore::store(['App\\A'], [], [
+            new PluginDescriptor('modifier', 'since', 'App\\A\\SinceModifier'),
+        ], trusted: true);
+
+        $loaded = PluginCacheStore::load(['App\\B'], []); // different namespace
+        $this->assertNotNull($loaded);
+        $this->assertCount(1, $loaded);
+        $this->assertSame('since', $loaded[0]->name);
+    }
+
+    public function test_trusted_cache_survives_file_mtime_change(): void
+    {
+        // A file-mtime change that would invalidate a normal cache must be
+        // ignored for a trusted cache — the mtime walk is skipped entirely.
+        $class = SinceModifier::class;
+
+        PluginCacheStore::store([], [$class], [
+            new PluginDescriptor('modifier', 'since', $class),
+        ], trusted: true);
+
+        $file = (new \ReflectionClass($class))->getFileName();
+        $this->assertIsString($file);
+        $original = filemtime($file);
+
+        try {
+            touch($file, $original + 2);
+            clearstatcache(true, $file);
+
+            $loaded = PluginCacheStore::load([], [$class]);
+            $this->assertNotNull($loaded);
+        } finally {
+            touch($file, $original);
+            clearstatcache(true, $file);
+        }
+    }
+
+    public function test_untrusted_cache_is_invalidated_by_non_bool_trusted_field(): void
+    {
+        // A tampered or otherwise corrupt `trusted` value (not a bool)
+        // must be treated as a stale cache rather than silently trusted.
+        $namespaces = ['App\\X'];
+        PluginCacheStore::store($namespaces, [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $valid = require $this->pluginCachePath;
+        $valid['trusted'] = 'yes'; // string, not bool
+        file_put_contents($this->pluginCachePath, '<?php return '.var_export($valid, true).';');
+
+        $this->assertNull(PluginCacheStore::load($namespaces, []));
+    }
+
+    public function test_store_writes_trusted_flag_into_payload(): void
+    {
+        PluginCacheStore::store([], [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ], trusted: true);
+
+        $payload = require $this->pluginCachePath;
+        $this->assertTrue($payload['trusted']);
+    }
+
+    public function test_store_writes_trusted_false_by_default(): void
+    {
+        PluginCacheStore::store([], [], [
+            new PluginDescriptor('modifier', 'a', 'App\\X'),
+        ]);
+
+        $payload = require $this->pluginCachePath;
+        $this->assertFalse($payload['trusted']);
+    }
 }

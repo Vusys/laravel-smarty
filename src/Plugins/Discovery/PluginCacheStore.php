@@ -17,10 +17,13 @@ namespace Vusys\LaravelSmarty\Plugins\Discovery;
  * the cache automatically — no explicit `smarty:plugins:clear` required.
  *
  * Note the cache skips *reflection/parsing*, not the filesystem walk:
- * `load()` still globs every namespace directory to mtime its files for
- * the fingerprint on each cold start. A trust-the-cache mode that skips
- * even that (à la `config:cache`) is deliberately out of scope until the
- * walk is measured as a real cost.
+ * `load()` still globs every namespace directory to mtime its files on
+ * each cold start for the fingerprint check. To skip even that cost,
+ * run `smarty:plugins:cache` as part of your deploy — it writes a
+ * *trusted* cache that `load()` accepts unconditionally, exactly like
+ * `config:cache` / `route:cache`. The trade-off mirrors those commands:
+ * plugin changes take effect only after re-running
+ * `smarty:plugins:cache`, not automatically.
  */
 class PluginCacheStore
 {
@@ -58,7 +61,14 @@ class PluginCacheStore
             return null;
         }
 
-        if ($payload['fingerprint'] !== self::fingerprint($namespaces, $manualClasses)) {
+        // Trusted caches (written by `smarty:plugins:cache`) skip the
+        // mtime walk; any other value triggers the full fingerprint check.
+        $trusted = $payload['trusted'] ?? false;
+        if (! is_bool($trusted)) {
+            return null;
+        }
+
+        if (! $trusted && $payload['fingerprint'] !== self::fingerprint($namespaces, $manualClasses)) {
             return null;
         }
 
@@ -99,11 +109,15 @@ class PluginCacheStore
      * Silently no-ops when there's no `bootstrap/cache/` directory to
      * write into — the next render will rescan and try again.
      *
+     * Pass `$trusted = true` (only from `smarty:plugins:cache`) to write
+     * a cache that `load()` accepts without a fingerprint check, skipping
+     * the mtime walk on every cold start.
+     *
      * @param  array<int, string>  $namespaces
      * @param  array<int, class-string>  $manualClasses
      * @param  array<int, PluginDescriptor>  $descriptors
      */
-    public static function store(array $namespaces, array $manualClasses, array $descriptors): void
+    public static function store(array $namespaces, array $manualClasses, array $descriptors, bool $trusted = false): void
     {
         $path = self::path();
         $directory = dirname($path);
@@ -114,6 +128,7 @@ class PluginCacheStore
 
         $payload = [
             'fingerprint' => self::fingerprint($namespaces, $manualClasses),
+            'trusted' => $trusted,
             'plugins' => array_map(static fn (PluginDescriptor $descriptor): array => $descriptor->toArray(), $descriptors),
         ];
 
