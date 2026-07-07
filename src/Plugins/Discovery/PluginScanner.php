@@ -96,19 +96,16 @@ class PluginScanner
 
         foreach ($namespaces as $namespace) {
             foreach (self::classesIn($namespace) as $class) {
-                $descriptor = self::resolveDescriptor($class);
-                if ($descriptor instanceof PluginDescriptor) {
-                    $descriptors[] = $descriptor;
-                }
+                array_push($descriptors, ...self::resolveDescriptor($class));
             }
         }
 
         foreach ($manualClasses as $class) {
-            $descriptor = self::resolveDescriptor($class);
-            if (! $descriptor instanceof PluginDescriptor) {
+            $found = self::resolveDescriptor($class);
+            if ($found === []) {
                 throw PluginRegistrationException::unrecognizedClass($class);
             }
-            $descriptors[] = $descriptor;
+            array_push($descriptors, ...$found);
         }
 
         // Overlapping namespaces (`App\Smarty` + `App\Smarty\Plugins`) or a
@@ -127,12 +124,18 @@ class PluginScanner
     }
 
     /**
+     * Return descriptors for all plugins a class registers. A class with
+     * one `#[SmartyPlugin]` attribute returns one descriptor; with two it
+     * returns two; a suffix-convention class (SinceModifier) returns one;
+     * an unrecognised class returns an empty list.
+     *
      * @param  class-string|string  $class
+     * @return list<PluginDescriptor>
      */
-    public static function resolveDescriptor(string $class): ?PluginDescriptor
+    public static function resolveDescriptor(string $class): array
     {
         if (! class_exists($class)) {
-            return null;
+            return [];
         }
 
         $reflection = new ReflectionClass($class);
@@ -140,32 +143,37 @@ class PluginScanner
         // Abstracts, interfaces, traits, enums-with-private-constructor:
         // not instantiable → not a plugin.
         if (! $reflection->isInstantiable()) {
-            return null;
+            return [];
         }
 
         $attributes = $reflection->getAttributes(SmartyPlugin::class);
         if ($attributes !== []) {
-            $attribute = $attributes[0]->newInstance();
-
-            if (! in_array($attribute->type, ['modifier', 'function', 'block'], true)) {
-                throw PluginRegistrationException::invalidType($attribute->type, $class);
-            }
-
             /** @var class-string $fqcn */
             $fqcn = $reflection->getName();
+            $descriptors = [];
 
-            return new PluginDescriptor($attribute->type, $attribute->name, $fqcn, $attribute->cacheable);
+            foreach ($attributes as $attributeReflection) {
+                $attribute = $attributeReflection->newInstance();
+
+                if (! in_array($attribute->type, ['modifier', 'function', 'block'], true)) {
+                    throw PluginRegistrationException::invalidType($attribute->type, $class);
+                }
+
+                $descriptors[] = new PluginDescriptor($attribute->type, $attribute->name, $fqcn, $attribute->cacheable);
+            }
+
+            return $descriptors;
         }
 
         $type = self::typeFromSuffix($reflection->getShortName());
         if ($type === null) {
-            return null;
+            return [];
         }
 
         /** @var class-string $fqcn */
         $fqcn = $reflection->getName();
 
-        return new PluginDescriptor($type, self::nameFromConvention($reflection, $type), $fqcn);
+        return [new PluginDescriptor($type, self::nameFromConvention($reflection, $type), $fqcn)];
     }
 
     /**
