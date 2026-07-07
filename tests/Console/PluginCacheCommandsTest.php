@@ -61,6 +61,10 @@ class PluginCacheCommandsTest extends TestCase
         $this->assertArrayHasKey('fingerprint', $payload);
         $this->assertArrayHasKey('plugins', $payload);
         $this->assertNotEmpty($payload['plugins']);
+
+        // The command writes a *trusted* cache so subsequent cold starts
+        // skip the mtime walk (config:cache / route:cache analogue).
+        $this->assertTrue($payload['trusted']);
     }
 
     public function test_smarty_plugins_clear_removes_the_cache_file(): void
