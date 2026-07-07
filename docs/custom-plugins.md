@@ -110,6 +110,24 @@ follows the cacheability of the expression it appears in. Suffix-convention clas
 no opt-out channel and always register cacheable — use the attribute when you need the
 flag.
 
+#### Stacking attributes — one class, multiple tags
+
+`#[SmartyPlugin]` is repeatable: apply it more than once to register the same class under several names or types. Every instance is validated and registered independently, so each can carry its own `cacheable` flag:
+
+```php
+#[SmartyPlugin(type: 'modifier', name: 'since')]
+#[SmartyPlugin(type: 'modifier', name: 'time_ago', cacheable: false)]
+final class TimeAgo
+{
+    public function __invoke(mixed $value): string
+    {
+        return $value === null ? '' : Carbon::parse($value)->diffForHumans();
+    }
+}
+```
+
+Templates can now call either `{$date|since}` or `{$date|time_ago}`. A common use case is providing both a short alias and a more descriptive name from the same implementation, or exposing the same logic as both a `modifier` and a `function`.
+
 ### Configuring discovery
 
 ```php
