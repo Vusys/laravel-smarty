@@ -12,6 +12,7 @@ use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\BadAttributeTypeModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\ExternalPlugins\TickFunction;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AbstractBaseModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\AttributeTaggedThing;
+use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\DualTaggedThing;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\CustomNamedModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\EmptyNameModifier;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\LoudFunction;
@@ -27,27 +28,23 @@ class PluginScannerTest extends TestCase
 {
     public function test_resolves_modifier_function_block_from_classname_suffix(): void
     {
-        $modifier = PluginScanner::resolveDescriptor(SinceModifier::class);
-        $this->assertNotNull($modifier);
+        [$modifier] = PluginScanner::resolveDescriptor(SinceModifier::class);
         $this->assertSame('modifier', $modifier->type);
         $this->assertSame('since', $modifier->name);
 
-        $function = PluginScanner::resolveDescriptor(LoudFunction::class);
-        $this->assertNotNull($function);
+        [$function] = PluginScanner::resolveDescriptor(LoudFunction::class);
         $this->assertSame('function', $function->type);
         $this->assertSame('loud', $function->name);
 
-        $block = PluginScanner::resolveDescriptor(WrapBlock::class);
-        $this->assertNotNull($block);
+        [$block] = PluginScanner::resolveDescriptor(WrapBlock::class);
         $this->assertSame('block', $block->type);
         $this->assertSame('wrap', $block->name);
     }
 
     public function test_public_name_property_overrides_convention_default(): void
     {
-        $descriptor = PluginScanner::resolveDescriptor(CustomNamedModifier::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(CustomNamedModifier::class);
 
-        $this->assertNotNull($descriptor);
         $this->assertSame('shouty', $descriptor->name);
     }
 
@@ -56,9 +53,8 @@ class PluginScannerTest extends TestCase
         // The override contract is "public instance property with a literal
         // default". A private $name must not leak as the plugin name —
         // private state isn't a public API surface.
-        $descriptor = PluginScanner::resolveDescriptor(PrivateNamedModifier::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(PrivateNamedModifier::class);
 
-        $this->assertNotNull($descriptor);
         $this->assertSame('private_named', $descriptor->name);
     }
 
@@ -66,9 +62,8 @@ class PluginScannerTest extends TestCase
     {
         // Static $name is per-class, not per-instance; using it as the
         // tag name would surprise callers who expected instance state.
-        $descriptor = PluginScanner::resolveDescriptor(StaticNamedModifier::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(StaticNamedModifier::class);
 
-        $this->assertNotNull($descriptor);
         $this->assertSame('static_named', $descriptor->name);
     }
 
@@ -76,9 +71,8 @@ class PluginScannerTest extends TestCase
     {
         // Registering with the empty string would be unusable — guard
         // against treating $name = '' as a deliberate override.
-        $descriptor = PluginScanner::resolveDescriptor(EmptyNameModifier::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(EmptyNameModifier::class);
 
-        $this->assertNotNull($descriptor);
         $this->assertSame('empty_name', $descriptor->name);
     }
 
@@ -100,36 +94,64 @@ class PluginScannerTest extends TestCase
 
     public function test_attribute_takes_precedence_over_classname_convention(): void
     {
-        $descriptor = PluginScanner::resolveDescriptor(AttributeTaggedThing::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(AttributeTaggedThing::class);
 
         // The classname doesn't end in any suffix, but the attribute
         // makes the class a registered modifier all the same.
-        $this->assertNotNull($descriptor);
         $this->assertSame('modifier', $descriptor->type);
         $this->assertSame('shrunk', $descriptor->name);
     }
 
+    public function test_repeatable_attribute_produces_one_descriptor_per_instance(): void
+    {
+        $result = PluginScanner::resolveDescriptor(DualTaggedThing::class);
+
+        $this->assertCount(2, $result);
+
+        $names = array_map(static fn ($d) => $d->name, $result);
+        $this->assertContains('dual_a', $names);
+        $this->assertContains('dual_b', $names);
+
+        foreach ($result as $descriptor) {
+            $this->assertSame('modifier', $descriptor->type);
+            $this->assertSame(DualTaggedThing::class, $descriptor->class);
+        }
+
+        // Each attribute's cacheable flag is preserved independently.
+        $byName = array_column($result, null, 'name');
+        $this->assertTrue($byName['dual_a']->cacheable);
+        $this->assertFalse($byName['dual_b']->cacheable);
+    }
+
+    public function test_repeatable_attribute_registers_both_names_in_namespace_scan(): void
+    {
+        $descriptors = PluginScanner::scan(['Vusys\\LaravelSmarty\\Tests\\Fixtures\\Plugins'], []);
+
+        $names = array_map(static fn ($d) => $d->name, $descriptors);
+        $this->assertContains('dual_a', $names);
+        $this->assertContains('dual_b', $names);
+    }
+
     public function test_classname_is_snake_cased_when_no_property_present(): void
     {
-        $descriptor = PluginScanner::resolveDescriptor(MultiWordModifier::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(MultiWordModifier::class);
 
-        $this->assertNotNull($descriptor);
         $this->assertSame('multi_word', $descriptor->name);
     }
 
     public function test_classes_without_suffix_or_attribute_are_skipped(): void
     {
-        $this->assertNull(PluginScanner::resolveDescriptor(PlainHelper::class));
+        $this->assertSame([], PluginScanner::resolveDescriptor(PlainHelper::class));
     }
 
     public function test_abstract_classes_are_skipped(): void
     {
-        $this->assertNull(PluginScanner::resolveDescriptor(AbstractBaseModifier::class));
+        $this->assertSame([], PluginScanner::resolveDescriptor(AbstractBaseModifier::class));
     }
 
-    public function test_unknown_classes_resolve_to_null(): void
+    public function test_unknown_classes_resolve_to_empty_list(): void
     {
-        $this->assertNull(PluginScanner::resolveDescriptor('App\\Does\\Not\\Exist'));
+        $this->assertSame([], PluginScanner::resolveDescriptor('App\\Does\\Not\\Exist'));
     }
 
     public function test_attribute_with_invalid_type_throws(): void
@@ -192,15 +214,13 @@ class PluginScannerTest extends TestCase
 
     public function test_attribute_cacheable_flag_lands_on_descriptor(): void
     {
-        $descriptor = PluginScanner::resolveDescriptor(TickFunction::class);
+        [$descriptor] = PluginScanner::resolveDescriptor(TickFunction::class);
 
-        $this->assertNotNull($descriptor);
         $this->assertFalse($descriptor->cacheable);
 
         // Convention-resolved classes have no opt-out channel and default
         // to cacheable, matching registerPlugin()'s own default.
-        $bySuffix = PluginScanner::resolveDescriptor(SinceModifier::class);
-        $this->assertNotNull($bySuffix);
+        [$bySuffix] = PluginScanner::resolveDescriptor(SinceModifier::class);
         $this->assertTrue($bySuffix->cacheable);
     }
 
