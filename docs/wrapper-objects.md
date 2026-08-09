@@ -2,13 +2,13 @@
 
 Plugin tags like `{route name="…"}` or `{session key="…"}` are designed for output position — they emit straight to the template body and can't be used as a value (an `{include}` parameter, an `{if}` operand, an attribute expression). To plug that gap the package auto-shares five read-only wrapper objects on every render:
 
-| Variable | Wraps | Public surface |
-|----------|-------|----------------|
-| `$auth` (or `null` when no user is authenticated) | `Auth::guard()` | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `canAny(array $abilities, $arguments = [])`, `canAll(array $abilities, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
-| `$request` | `Illuminate\Http\Request` (read-only) | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()` |
-| `$session` | `Illuminate\Session\Store` (read-only) | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()` |
-| `$route` | `UrlGenerator` | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)` |
-| `$errors` | `Illuminate\Support\ViewErrorBag` (read-only) | `any()`, `has($key)`, `count()`, `all($format = null)`, `first($key, $format = null)`, `get($key, $format = null)`, `getBag($name)`. Always non-null even outside session contexts. |
+| Variable                                          | Wraps                                         | Public surface                                                                                                                                                                                                    |
+| ------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$auth` (or `null` when no user is authenticated) | `Auth::guard()`                               | `id`, `user`, `is(?User)`, `can($ability, $arguments = [])`, `canAny(array $abilities, $arguments = [])`, `canAll(array $abilities, $arguments = [])`, `guard($name)`. Use `{if $auth}` for the truthiness check. |
+| `$request`                                        | `Illuminate\Http\Request` (read-only)         | `routeIs(...$patterns)`, `route($param, $default = null)`, `is(...$patterns)`, `input($key, $default)`, `fullUrl()`, `path()`                                                                                     |
+| `$session`                                        | `Illuminate\Session\Store` (read-only)        | `__get($key)`, `has($key)`, `get($key, $default)`, `token()`, `flashedKeys()`                                                                                                                                     |
+| `$route`                                          | `UrlGenerator`                                | `to($name, $params)`, `path($name, $params)`, `asset($path)`, `url($path)`                                                                                                                                        |
+| `$errors`                                         | `Illuminate\Support\ViewErrorBag` (read-only) | `any()`, `has($key)`, `count()`, `all($format = null)`, `first($key, $format = null)`, `get($key, $format = null)`, `getBag($name)`. Always non-null even outside session contexts.                               |
 
 ```smarty
 {* Active nav state without controller plumbing *}

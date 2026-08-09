@@ -68,7 +68,7 @@ class TimeAgoModifier
 }
 ```
 
-Classes that carry `#[SmartyPlugin]` skip the convention entirely; the attribute's `name:` argument is authoritative there. So the priority resolves cleanly: **attribute > `$name` property > snake-cased classname**.
+Classes that carry `#[SmartyPlugin]` skip the convention entirely; the attribute's `name:` argument is authoritative there. So the priority resolves cleanly: **attribute \> `$name` property \> snake-cased classname**.
 
 ### Attribute-tagged
 
@@ -89,10 +89,7 @@ final class TimeAgo
 
 A class carrying the attribute is **never** also matched by the suffix convention — the attribute wins outright, so renaming the class won't double-register the plugin.
 
-The attribute also carries the plugin's cacheability. If the output depends on request
-state — auth, session, locale, the current URL — declare `cacheable: false` and, under
-`smarty.caching`, the call compiles into a `{nocache}` region that re-evaluates on every
-cache hit instead of baking the first render's output into the cached page:
+The attribute also carries the plugin's cacheability. If the output depends on request state — auth, session, locale, the current URL — declare `cacheable: false` and, under `smarty.caching`, the call compiles into a `{nocache}` region that re-evaluates on every cache hit instead of baking the first render's output into the cached page:
 
 ```php
 #[SmartyPlugin(type: 'function', name: 'greeting', cacheable: false)]
@@ -105,10 +102,7 @@ final class LocaleGreeting
 }
 ```
 
-Smarty only honours the flag for `function` and `block` plugins; a modifier's output
-follows the cacheability of the expression it appears in. Suffix-convention classes have
-no opt-out channel and always register cacheable — use the attribute when you need the
-flag.
+Smarty only honours the flag for `function` and `block` plugins; a modifier's output follows the cacheability of the expression it appears in. Suffix-convention classes have no opt-out channel and always register cacheable — use the attribute when you need the flag.
 
 #### Stacking attributes — one class, multiple tags
 
@@ -161,13 +155,13 @@ The class still has to either carry `#[SmartyPlugin]` or end in a recognised suf
 
 #### Full programmatic API
 
-| Method | Purpose |
-|--------|---------|
+| Method                                             | Purpose                                                                                                                                                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `LaravelSmarty::discoverPluginsIn(...$namespaces)` | Add namespaces to the discovery scan. Idempotent — duplicates are silently coalesced, so a package can call it on every boot without worrying about double-registration. |
-| `LaravelSmarty::registerPluginClass($class)` | Register a single class outside any scanned namespace. |
-| `LaravelSmarty::rebuildDiscoveryCache()` | Force a fresh scan and rewrite the on-disk cache. Backs the `smarty:plugins:cache` command; also handy from a deploy hook that needs the rebuild inline. |
-| `LaravelSmarty::flushDiscoveredCache()` | Drop in-memory and on-disk discovery state. Backs `smarty:plugins:clear`. Tests use this to isolate plugin state between cases. |
-| `LaravelSmarty::namespaces()` | Read-only introspection of the namespaces currently registered for scanning (config + programmatic). Useful in debugging and in service-provider assertions. |
+| `LaravelSmarty::registerPluginClass($class)`       | Register a single class outside any scanned namespace.                                                                                                                   |
+| `LaravelSmarty::rebuildDiscoveryCache()`           | Force a fresh scan and rewrite the on-disk cache. Backs the `smarty:plugins:cache` command; also handy from a deploy hook that needs the rebuild inline.                 |
+| `LaravelSmarty::flushDiscoveredCache()`            | Drop in-memory and on-disk discovery state. Backs `smarty:plugins:clear`. Tests use this to isolate plugin state between cases.                                          |
+| `LaravelSmarty::namespaces()`                      | Read-only introspection of the namespaces currently registered for scanning (config + programmatic). Useful in debugging and in service-provider assertions.             |
 
 ### Discovery cache
 
@@ -189,11 +183,11 @@ php artisan smarty:plugins:clear    # delete the cache file
 
 Class plugins follow Smarty's native plugin signatures, so an `__invoke` method is all you need:
 
-| Type | `__invoke()` signature |
-|------|------------------------|
-| `modifier` | `__invoke(mixed $value, ...$extraArgs): mixed` — chainable like any other modifier. |
+| Type       | `__invoke()` signature                                                                                                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `modifier` | `__invoke(mixed $value, ...$extraArgs): mixed` — chainable like any other modifier.                                                                                                                                                                           |
 | `function` | `__invoke(array $params, \Smarty\Template $template): string` — params come straight from `{tag key=value …}`; `$template` enables the `assign=` idiom (`$template->assign($params['assign'], $value)`). Declare only `(array $params)` if you don't need it. |
-| `block` | `__invoke(array $params, ?string $content, \Smarty\Template $template, bool &$repeat): string` — `$content` is `null` on open, the body string on close. |
+| `block`    | `__invoke(array $params, ?string $content, \Smarty\Template $template, bool &$repeat): string` — `$content` is `null` on open, the body string on close.                                                                                                      |
 
 ### Worked example: a block plugin
 
