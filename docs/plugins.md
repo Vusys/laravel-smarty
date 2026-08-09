@@ -128,23 +128,23 @@ Scoped checks (`for=` or the modifier's second argument) need an explicit `{if $
 
 Inside `{error}` the validation message is bound as `$message` for the duration of the block, restored on exit. Multi-form pages can target a named error bag with `bag=`, mirroring Blade's `@error('title', 'login')`.
 
-| Tag | Equivalent |
-|-----|------------|
-| `{csrf_field}` | `csrf_field()` — full hidden input |
-| `{csrf_token}` | `csrf_token()` — raw token, e.g. for `<meta>` tags or AJAX headers |
-| `{method_field method="PUT"}` | `method_field('PUT')` |
-| `{old field="title" default=...}` | `old('title', $default)` — output is HTML-escaped like Blade's `{{ old(...) }}`; add `raw=true` to opt out. Array old-input (array form fields) renders as an empty string |
-| `{error field="..." bag="login"}...{/error}` | `@error('...', 'login')` — body renders only when there is a validation error; `$message` is bound inside; `bag=` defaults to `default` |
-| `{checked when=$cond}` / `{selected when=...}` / `{disabled when=...}` / `{readonly when=...}` / `{required when=...}` | Blade's `@checked` family — emits the bare attribute token when `when=` is truthy, nothing otherwise |
+| Tag                                                                                                                    | Equivalent                                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{csrf_field}`                                                                                                         | `csrf_field()` — full hidden input                                                                                                                                         |
+| `{csrf_token}`                                                                                                         | `csrf_token()` — raw token, e.g. for `<meta>` tags or AJAX headers                                                                                                         |
+| `{method_field method="PUT"}`                                                                                          | `method_field('PUT')`                                                                                                                                                      |
+| `{old field="title" default=...}`                                                                                      | `old('title', $default)` — output is HTML-escaped like Blade's `{{ old(...) }}`; add `raw=true` to opt out. Array old-input (array form fields) renders as an empty string |
+| `{error field="..." bag="login"}...{/error}`                                                                           | `@error('...', 'login')` — body renders only when there is a validation error; `$message` is bound inside; `bag=` defaults to `default`                                    |
+| `{checked when=$cond}` / `{selected when=...}` / `{disabled when=...}` / `{readonly when=...}` / `{required when=...}` | Blade's `@checked` family — emits the bare attribute token when `when=` is truthy, nothing otherwise                                                                       |
 
 ## URLs & assets
 
-| Tag | Equivalent |
-|-----|------------|
-| `{route name="posts.show" post=$post}` | `route('posts.show', ['post' => $post])` — every named param other than `name=` becomes a route parameter |
-| `{url path="/login"}` | `url('/login')` |
-| `{asset path="img/logo.svg"}` | `asset('img/logo.svg')` |
-| `{signed_route name="unsubscribe" user=$user->id}` | `URL::signedRoute('unsubscribe', ['user' => $user->id])` — same param convention as `{route}` |
+| Tag                                                                       | Equivalent                                                                                                                            |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `{route name="posts.show" post=$post}`                                    | `route('posts.show', ['post' => $post])` — every named param other than `name=` becomes a route parameter                             |
+| `{url path="/login"}`                                                     | `url('/login')`                                                                                                                       |
+| `{asset path="img/logo.svg"}`                                             | `asset('img/logo.svg')`                                                                                                               |
+| `{signed_route name="unsubscribe" user=$user->id}`                        | `URL::signedRoute('unsubscribe', ['user' => $user->id])` — same param convention as `{route}`                                         |
 | `{temporary_signed_route name="download" expiration=3600 file=$file->id}` | `URL::temporarySignedRoute('download', 3600, ['file' => $file->id])` — `expiration=` accepts `int` seconds or any `DateTimeInterface` |
 
 Both signed-URL helpers are non-cacheable: a baked signature would either ship a stale URL on warm renders or, for the temporary variant, an already-expired link.
@@ -159,23 +159,20 @@ Both signed-URL helpers are non-cacheable: a baked signature would either ship a
 <p>{"messages.apples"|trans_choice:$count}</p>
 ```
 
-| Tag/modifier | Equivalent |
-|--------------|------------|
-| `{lang key="..." foo=... bar=...}` | `__('...', ['foo' => ..., 'bar' => ...])` — every named param other than `key=` and `raw=` becomes a replacement |
-| `\|trans` modifier | `__($key, $replace = [])` |
+| Tag/modifier                               | Equivalent                                                                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `{lang key="..." foo=... bar=...}`         | `__('...', ['foo' => ..., 'bar' => ...])` — every named param other than `key=` and `raw=` becomes a replacement           |
+| `\|trans` modifier                         | `__($key, $replace = [])`                                                                                                  |
 | `{lang_choice key="..." count=$n foo=...}` | `trans_choice('...', $n, ['foo' => ...])` — every named param other than `key=`, `count=` and `raw=` becomes a replacement |
-| `\|trans_choice` modifier | `trans_choice($key, $count, $replace = [])` |
+| `\|trans_choice` modifier                  | `trans_choice($key, $count, $replace = [])`                                                                                |
 
-`{lang}` and `{lang_choice}` output is HTML-escaped like Blade's `{{ __(...) }}` — replacement
-values are user data more often than not. For translation lines that intentionally contain
-markup, opt out per call with `raw=true`:
+`{lang}` and `{lang_choice}` output is HTML-escaped like Blade's `{{ __(...) }}` — replacement values are user data more often than not. For translation lines that intentionally contain markup, opt out per call with `raw=true`:
 
 ```smarty
 {lang key="legal.disclaimer_html" raw=true}
 ```
 
-The `|trans` / `|trans_choice` modifiers are covered by the regular `escape_html` pass, so both
-syntaxes produce identical output.
+The `|trans` / `|trans_choice` modifiers are covered by the regular `escape_html` pass, so both syntaxes produce identical output.
 
 ## Vite
 
@@ -193,21 +190,19 @@ syntaxes produce identical output.
 {vite_content path="resources/img/sprite.svg"}
 ```
 
-| Tag | Equivalent |
-|-----|------------|
-| `{vite entrypoints=[...] build_directory=...}` | Blade's `@vite([...], $buildDirectory)` — `build_directory` is optional |
-| `{vite_react_refresh}` | Blade's `@viteReactRefresh` |
-| `{csp_nonce}` | `Vite::cspNonce()` — the per-request CSP nonce, empty string when none has been set |
-| `{vite_asset path="..." build_directory="..."}` | `Vite::asset($path, $buildDirectory)` — single versioned URL for an asset not declared as an entrypoint |
+| Tag                                               | Equivalent                                                                                                |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `{vite entrypoints=[...] build_directory=...}`    | Blade's `@vite([...], $buildDirectory)` — `build_directory` is optional                                   |
+| `{vite_react_refresh}`                            | Blade's `@viteReactRefresh`                                                                               |
+| `{csp_nonce}`                                     | `Vite::cspNonce()` — the per-request CSP nonce, empty string when none has been set                       |
+| `{vite_asset path="..." build_directory="..."}`   | `Vite::asset($path, $buildDirectory)` — single versioned URL for an asset not declared as an entrypoint   |
 | `{vite_content path="..." build_directory="..."}` | `Vite::content($path, $buildDirectory)` — file contents (e.g. for inline SVG sprites under hashed builds) |
 
 `{csp_nonce}`, `{vite_asset}`, and `{vite_content}` are all non-cacheable — the nonce changes per request, and asset URLs / contents change between hot mode and a built deployment.
 
 ## Environment blocks
 
-Blade's `@env` / `@production` as lazy-body blocks — and deliberately the *only* channel for
-templates to read the app environment, since `{config key='app.env'}` is banned under the
-Strict security policy:
+Blade's `@env` / `@production` as lazy-body blocks — and deliberately the *only* channel for templates to read the app environment, since `{config key='app.env'}` is banned under the Strict security policy:
 
 ```smarty
 {env names="local,staging"}
@@ -225,16 +220,14 @@ Strict security policy:
 {/production}
 ```
 
-| Tag | Equivalent |
-|-----|------------|
-| `{env names="..."}...{/env}` | `@env([...])` — `names=` takes a comma-separated string or an array; matches when the current environment is in the list |
-| `{env names="..." inverse=true}` | body renders when the environment is *not* in the list |
-| `{production}...{/production}` | `@production` |
-| `{production inverse=true}` | Blade's `@env('production')` negation — renders everywhere except production |
+| Tag                              | Equivalent                                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `{env names="..."}...{/env}`     | `@env([...])` — `names=` takes a comma-separated string or an array; matches when the current environment is in the list |
+| `{env names="..." inverse=true}` | body renders when the environment is *not* in the list                                                                   |
+| `{production}...{/production}`   | `@production`                                                                                                            |
+| `{production inverse=true}`      | Blade's `@env('production')` negation — renders everywhere except production                                             |
 
-A bare `{env}` with no `names=` fails closed in both arms, same as the gate blocks' empty
-`abilities=[]`. Hidden arms never evaluate their bodies. Both blocks are non-cacheable —
-a cached page can outlive a deploy or be shared across differently-configured nodes.
+A bare `{env}` with no `names=` fails closed in both arms, same as the gate blocks' empty `abilities=[]`. Hidden arms never evaluate their bodies. Both blocks are non-cacheable — a cached page can outlive a deploy or be shared across differently-configured nodes.
 
 ## Conditional attributes
 
@@ -243,10 +236,10 @@ a cached page can outlive a deploy or be shared across differently-configured no
 <div style="{style array=['color: red' => $hasError, 'font-weight: bold' => $emphasised]}">
 ```
 
-| Tag | Equivalent |
-|-----|------------|
+| Tag                   | Equivalent                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `{class array=[...]}` | Blade's `@class([...])` — delegates to `Illuminate\Support\Arr::toCssClasses()`, the same helper Blade uses |
-| `{style array=[...]}` | Blade's `@style([...])` — delegates to `Illuminate\Support\Arr::toCssStyles()` |
+| `{style array=[...]}` | Blade's `@style([...])` — delegates to `Illuminate\Support\Arr::toCssStyles()`                              |
 
 ## Number formatting
 
@@ -261,13 +254,13 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 {$count|number_for_humans:1}       {* 1.5 thousand *}
 ```
 
-| Modifier | Equivalent |
-|----------|------------|
-| `\|currency:$in:$locale:$precision` | `Number::currency($value, $in, $locale, $precision)` — the `$precision` argument needs Laravel ≥ 11.30 (`Number::currency()` had no precision parameter before that); on older versions it is silently ignored |
-| `\|file_size:$precision:$maxPrecision` | `Number::fileSize($bytes, $precision, $maxPrecision)` |
-| `\|percentage:$precision:$maxPrecision:$locale` | `Number::percentage($value, $precision, $maxPrecision, $locale)` |
-| `\|abbreviate:$precision:$maxPrecision` | `Number::abbreviate($value, $precision, $maxPrecision)` |
-| `\|number_for_humans:$precision:$maxPrecision:$abbreviate` | `Number::forHumans($value, $precision, $maxPrecision, $abbreviate)` |
+| Modifier                                                   | Equivalent                                                                                                                                                                                                     |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `\|currency:$in:$locale:$precision`                        | `Number::currency($value, $in, $locale, $precision)` — the `$precision` argument needs Laravel ≥ 11.30 (`Number::currency()` had no precision parameter before that); on older versions it is silently ignored |
+| `\|file_size:$precision:$maxPrecision`                     | `Number::fileSize($bytes, $precision, $maxPrecision)`                                                                                                                                                          |
+| `\|percentage:$precision:$maxPrecision:$locale`            | `Number::percentage($value, $precision, $maxPrecision, $locale)`                                                                                                                                               |
+| `\|abbreviate:$precision:$maxPrecision`                    | `Number::abbreviate($value, $precision, $maxPrecision)`                                                                                                                                                        |
+| `\|number_for_humans:$precision:$maxPrecision:$abbreviate` | `Number::forHumans($value, $precision, $maxPrecision, $abbreviate)`                                                                                                                                            |
 
 ## Misc helpers
 
@@ -302,29 +295,23 @@ Wraps `Illuminate\Support\Number` (Laravel 11+) so locale-aware currency, byte s
 
 `$session` is one of five auto-shared wrapper objects — see [Auto-shared wrapper objects](wrapper-objects.md) for the full surface (`$auth`, `$request`, `$session`, `$route`, `$errors`).
 
-| Tag/modifier | Equivalent |
-|--------------|------------|
-| `{config key="app.name" default=...}` | `config('app.name', $default)` |
-| `{session key="status" default=...}` | `session('status', $default)` |
-| `{session key="status" assign="status"}` | `$status = session('status')` (assigns instead of printing) |
-| `$session->status` (auto-shared, see [Auto-shared wrapper objects](wrapper-objects.md)) | `session('status')` |
-| `\|markdown` modifier | `Str::markdown($value, ['html_input' => 'escape', 'allow_unsafe_links' => false])` — embedded HTML is escaped and `javascript:`/`data:` links are stripped, so the result renders unescaped without `nofilter` |
-| `\|json` modifier | `Js::from($value)` — Blade's `@js`, *not* `@json`/`json_encode()`. Output is script-safe already and renders without `nofilter` |
-| `{service name="App\\Services\\Foo" assign="foo"}` | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template |
-| `{dump x=$x y=$y}` | `dump($x, $y)` — every named param is dumped. Gated to `local`/`testing`; silent no-op elsewhere |
-| `{dd x=$x}` | `dd($x, ...)` — every named param is dumped, then halts. Gated to `local`/`testing`; silent no-op elsewhere |
+| Tag/modifier                                                                            | Equivalent                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{config key="app.name" default=...}`                                                   | `config('app.name', $default)`                                                                                                                                                                                 |
+| `{session key="status" default=...}`                                                    | `session('status', $default)`                                                                                                                                                                                  |
+| `{session key="status" assign="status"}`                                                | `$status = session('status')` (assigns instead of printing)                                                                                                                                                    |
+| `$session->status` (auto-shared, see [Auto-shared wrapper objects](wrapper-objects.md)) | `session('status')`                                                                                                                                                                                            |
+| `\|markdown` modifier                                                                   | `Str::markdown($value, ['html_input' => 'escape', 'allow_unsafe_links' => false])` — embedded HTML is escaped and `javascript:`/`data:` links are stripped, so the result renders unescaped without `nofilter` |
+| `\|json` modifier                                                                       | `Js::from($value)` — Blade's `@js`, *not* `@json`/`json_encode()`. Output is script-safe already and renders without `nofilter`                                                                                |
+| `{service name="App\\Services\\Foo" assign="foo"}`                                      | `resolve('App\\Services\\Foo')` and assign as `$foo` for the rest of the template                                                                                                                              |
+| `{dump x=$x y=$y}`                                                                      | `dump($x, $y)` — every named param is dumped. Gated to `local`/`testing`; silent no-op elsewhere                                                                                                               |
+| `{dd x=$x}`                                                                             | `dd($x, ...)` — every named param is dumped, then halts. Gated to `local`/`testing`; silent no-op elsewhere                                                                                                    |
 
 ## Stacks (`@push` / `@stack`)
 
-There is no `{push}` / `{stack}` pair, and one won't be added — we evaluated it and the
-cost/benefit doesn't hold up: Blade renders child content *before* the layout, so `@push`
-naturally collects before `@stack` flushes, while Smarty's `{extends}` compiles parent and
-child into a single template and renders top-down. A faithful port would need two-pass
-rendering or output buffering tricks that break under output caching.
+There is no `{push}` / `{stack}` pair, and one won't be added — we evaluated it and the cost/benefit doesn't hold up: Blade renders child content *before* the layout, so `@push` naturally collects before `@stack` flushes, while Smarty's `{extends}` compiles parent and child into a single template and renders top-down. A faithful port would need two-pass rendering or output buffering tricks that break under output caching.
 
-For the common case — a layout slot that child templates append to — Smarty's `{capture}`
-with `append=` covers it. `append='scripts'` appends each captured chunk to the `$scripts`
-template variable (an array), which the layout flushes after the content block:
+For the common case — a layout slot that child templates append to — Smarty's `{capture}` with `append=` covers it. `append='scripts'` appends each captured chunk to the `$scripts` template variable (an array), which the layout flushes after the content block:
 
 ```smarty
 {* child.tpl *}
@@ -348,9 +335,4 @@ template variable (an array), which the layout flushes after the content block:
 </body>
 ```
 
-Caveats compared to real stacks: the `{capture}` calls must live *inside* a `{block}` —
-under `{extends}`, child content outside blocks is discarded at compile time; the flush
-point must come after the block that pushes (inheritance shares one variable scope and
-renders the parent top-down, so a `</body>` flush sees everything the content block
-appended); and there's no `@once` de-duplication — a partial `{include}`d twice pushes
-twice.
+Caveats compared to real stacks: the `{capture}` calls must live *inside* a `{block}` — under `{extends}`, child content outside blocks is discarded at compile time; the flush point must come after the block that pushes (inheritance shares one variable scope and renders the parent top-down, so a `</body>` flush sees everything the content block appended); and there's no `@once` de-duplication — a partial `{include}`d twice pushes twice.

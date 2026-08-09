@@ -18,10 +18,10 @@ php artisan smarty:optimize --extension=tpl
 php artisan smarty:optimize --force          # recompile even if up to date
 ```
 
-| Option        | Description |
-|---------------|-------------|
+| Option        | Description                                                 |
+| ------------- | ----------------------------------------------------------- |
 | `--extension` | Template extension to scan. Defaults to `smarty.extension`. |
-| `--force`     | Recompile even when compiled output is current. |
+| `--force`     | Recompile even when compiled output is current.             |
 
 The command continues through the full template list even when individual templates fail to compile — Smarty's per-template trail is forwarded to stdout, so failures are visible but don't abort the run. The exit code is always `0`. If your deploy pipeline needs to fail on any compile error, parse the output (Smarty prefixes failures with the template path) or run a follow-up `view()` smoke test against the offending templates.
 
@@ -34,11 +34,11 @@ php artisan smarty:clear-compiled
 php artisan smarty:clear-compiled --file=welcome.tpl
 ```
 
-| Option         | Description |
-|----------------|-------------|
+| Option         | Description                                      |
+| -------------- | ------------------------------------------------ |
 | `--file`       | Clear compiled output for one specific template. |
-| `--compile-id` | Restrict to a specific `compile_id`. |
-| `--expire`     | Only clear entries older than N seconds. |
+| `--compile-id` | Restrict to a specific `compile_id`.             |
+| `--expire`     | Only clear entries older than N seconds.         |
 
 ## `smarty:clear-cache`
 
@@ -50,11 +50,11 @@ php artisan smarty:clear-cache --file=welcome.tpl --cache-id=user.42
 php artisan smarty:clear-cache --expire=86400        # only drop entries older than a day
 ```
 
-| Option         | Description |
-|----------------|-------------|
-| `--file`       | Clear cache for one specific template. |
-| `--cache-id`   | Restrict to a `cache_id` group. |
-| `--compile-id` | Restrict to a `compile_id`. |
+| Option         | Description                              |
+| -------------- | ---------------------------------------- |
+| `--file`       | Clear cache for one specific template.   |
+| `--cache-id`   | Restrict to a `cache_id` group.          |
+| `--compile-id` | Restrict to a `compile_id`.              |
 | `--expire`     | Only clear entries older than N seconds. |
 
 ## `smarty:plugins:cache`
