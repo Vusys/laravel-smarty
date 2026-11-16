@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Plugins\Discovery;
 
+use Illuminate\Support\Facades\File;
+
 /**
  * On-disk cache for the discovered class-backed plugin map.
  *
@@ -146,7 +148,7 @@ class PluginCacheStore
         @chmod($temp, 0o666 & ~umask());
 
         if (! @rename($temp, $path)) {
-            @unlink($temp);
+            File::delete($temp);
         }
     }
 
@@ -154,7 +156,7 @@ class PluginCacheStore
     {
         $path = self::path();
         if (is_file($path)) {
-            @unlink($path);
+            File::delete($path);
         }
     }
 

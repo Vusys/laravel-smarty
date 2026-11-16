@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Tests\Console;
 
+use Illuminate\Support\Facades\File;
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
 use Vusys\LaravelSmarty\Tests\TestCase;
@@ -20,7 +21,7 @@ class PluginCacheCommandsTest extends TestCase
 
         $this->pluginCachePath = sys_get_temp_dir().'/laravel-smarty-tests/console-cache/laravel-smarty-plugins.php';
         @mkdir(dirname($this->pluginCachePath), 0o755, true);
-        @unlink($this->pluginCachePath);
+        File::delete($this->pluginCachePath);
 
         PluginCacheStore::$pathOverride = $this->pluginCachePath;
     }
@@ -28,7 +29,7 @@ class PluginCacheCommandsTest extends TestCase
     protected function tearDown(): void
     {
         PluginCacheStore::$pathOverride = null;
-        @unlink($this->pluginCachePath);
+        File::delete($this->pluginCachePath);
 
         LaravelSmarty::flushDiscoveredCache();
 

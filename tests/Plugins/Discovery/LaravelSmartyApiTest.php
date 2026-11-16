@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
+use Illuminate\Support\Facades\File;
 use Vusys\LaravelSmarty\LaravelSmarty;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
@@ -146,7 +147,7 @@ class LaravelSmartyApiTest extends TestCase
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/rebuild-cache/laravel-smarty-plugins.php';
         @mkdir(dirname($cachePath), 0o755, true);
-        @unlink($cachePath);
+        File::delete($cachePath);
 
         PluginCacheStore::$pathOverride = $cachePath;
 
@@ -161,7 +162,7 @@ class LaravelSmartyApiTest extends TestCase
             $this->assertFileExists($cachePath);
         } finally {
             PluginCacheStore::$pathOverride = null;
-            @unlink($cachePath);
+            File::delete($cachePath);
         }
     }
 
@@ -186,7 +187,7 @@ class LaravelSmartyApiTest extends TestCase
             $this->assertNotEmpty($rebuilt['plugins']);
         } finally {
             PluginCacheStore::$pathOverride = null;
-            @unlink($cachePath);
+            File::delete($cachePath);
         }
     }
 
@@ -194,7 +195,7 @@ class LaravelSmartyApiTest extends TestCase
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/rebuild-rescan-cache/laravel-smarty-plugins.php';
         @mkdir(dirname($cachePath), 0o755, true);
-        @unlink($cachePath);
+        File::delete($cachePath);
 
         PluginCacheStore::$pathOverride = $cachePath;
 
@@ -229,7 +230,7 @@ class LaravelSmartyApiTest extends TestCase
             $this->assertContains('since', $names);
         } finally {
             PluginCacheStore::$pathOverride = null;
-            @unlink($cachePath);
+            File::delete($cachePath);
         }
     }
 
@@ -237,7 +238,7 @@ class LaravelSmartyApiTest extends TestCase
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/flush-cache/laravel-smarty-plugins.php';
         @mkdir(dirname($cachePath), 0o755, true);
-        @unlink($cachePath);
+        File::delete($cachePath);
 
         PluginCacheStore::$pathOverride = $cachePath;
 
@@ -254,7 +255,7 @@ class LaravelSmartyApiTest extends TestCase
             $this->assertFileDoesNotExist($cachePath);
         } finally {
             PluginCacheStore::$pathOverride = null;
-            @unlink($cachePath);
+            File::delete($cachePath);
         }
     }
 
@@ -262,7 +263,7 @@ class LaravelSmartyApiTest extends TestCase
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/cache-hit-short-circuit/laravel-smarty-plugins.php';
         @mkdir(dirname($cachePath), 0o755, true);
-        @unlink($cachePath);
+        File::delete($cachePath);
 
         PluginCacheStore::$pathOverride = $cachePath;
 
@@ -294,7 +295,7 @@ class LaravelSmartyApiTest extends TestCase
             $this->assertSame(['cache_hit_marker'], $names);
         } finally {
             PluginCacheStore::$pathOverride = null;
-            @unlink($cachePath);
+            File::delete($cachePath);
         }
     }
 
@@ -302,7 +303,7 @@ class LaravelSmartyApiTest extends TestCase
     {
         $cachePath = sys_get_temp_dir().'/laravel-smarty-tests/preexisting-cache/laravel-smarty-plugins.php';
         @mkdir(dirname($cachePath), 0o755, true);
-        @unlink($cachePath);
+        File::delete($cachePath);
 
         PluginCacheStore::$pathOverride = $cachePath;
 
@@ -331,7 +332,7 @@ class LaravelSmartyApiTest extends TestCase
             $this->assertSame($descriptors, $resolvedProp->getValue());
         } finally {
             PluginCacheStore::$pathOverride = null;
-            @unlink($cachePath);
+            File::delete($cachePath);
         }
     }
 }
