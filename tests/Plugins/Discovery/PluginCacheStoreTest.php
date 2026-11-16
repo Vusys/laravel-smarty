@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Vusys\LaravelSmarty\Tests\Plugins\Discovery;
 
 use Composer\Autoload\ClassLoader;
+use Illuminate\Support\Facades\File;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginCacheStore;
 use Vusys\LaravelSmarty\Plugins\Discovery\PluginDescriptor;
 use Vusys\LaravelSmarty\Tests\Fixtures\Plugins\SinceModifier;
@@ -24,7 +25,7 @@ class PluginCacheStoreTest extends TestCase
         @mkdir($this->pluginCacheDir, 0o755, true);
 
         $this->pluginCachePath = $this->pluginCacheDir.'/laravel-smarty-plugins.php';
-        @unlink($this->pluginCachePath);
+        File::delete($this->pluginCachePath);
 
         PluginCacheStore::$pathOverride = $this->pluginCachePath;
     }
@@ -33,7 +34,7 @@ class PluginCacheStoreTest extends TestCase
     {
         PluginCacheStore::$pathOverride = null;
 
-        @unlink($this->pluginCachePath);
+        File::delete($this->pluginCachePath);
 
         parent::tearDown();
     }
@@ -295,7 +296,7 @@ class PluginCacheStoreTest extends TestCase
         // The atomic write goes through tempnam() + rename(); a failed
         // cleanup would litter bootstrap/cache with orphaned temp files.
         foreach (glob($this->pluginCacheDir.'/*') ?: [] as $file) {
-            @unlink($file);
+            File::delete($file);
         }
 
         PluginCacheStore::store([], [], [
@@ -314,7 +315,7 @@ class PluginCacheStoreTest extends TestCase
         // the same fingerprint layer: new .php file → stale cache.
         $dir = sys_get_temp_dir().'/laravel-smarty-tests/probe-namespace';
         @mkdir($dir, 0o755, true);
-        array_map(unlink(...), glob($dir.'/*.php') ?: []);
+        array_map(File::delete(...), glob($dir.'/*.php') ?: []);
         file_put_contents($dir.'/ExistingModifier.php', "<?php\n");
 
         foreach (spl_autoload_functions() as $autoloader) {
@@ -337,7 +338,7 @@ class PluginCacheStoreTest extends TestCase
         try {
             $this->assertNull(PluginCacheStore::load($namespaces, []));
         } finally {
-            @unlink($dir.'/_TmpInvalidationProbe.php');
+            File::delete($dir.'/_TmpInvalidationProbe.php');
         }
     }
 
