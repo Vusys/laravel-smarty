@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is [semver](https://semver.org/) with the usual pre-1.0 caveat that minor releases may contain breaking changes (flagged below).
 
+## \[Unreleased\]
+
+### Fixed
+
+- **An `Htmlable` is printed as HTML, as in Blade's `{{ }}`** (#68). Under `escape_html`, every `{$…}` was escaped, including values that are already HTML. So `{$paginator->links()}` (the documented way to render pagination), an `HtmlString`, or a custom modifier's `Htmlable` return rendered as visible markup. Print expressions now call `PluginOutput::printed()` in place of Smarty's inline `htmlspecialchars()`, with the same arguments. An `Illuminate\Contracts\Support\Htmlable` is emitted with `toHtml()`, and everything else is escaped exactly as before. Run `php artisan smarty:clear-compiled` after upgrading, because existing compiled templates keep the old escaping until they recompile.
+
 ## \[0.22.0\] - 2026-07-07
 
 Two plugin-discovery improvements: one class can now register under multiple tag names, and `smarty:plugins:cache` skips the mtime walk on every subsequent cold start.

@@ -7,6 +7,7 @@ namespace Vusys\LaravelSmarty\Debug;
 use Closure;
 use Smarty\Compiler\Template as SmartyTemplateCompiler;
 use Smarty\Template;
+use Vusys\LaravelSmarty\Plugins\PluginOutput;
 
 /**
  * Drop-in replacement for Smarty's template compiler that emits source
@@ -68,13 +69,29 @@ class LineTrackingCompiler extends SmartyTemplateCompiler
     {
         $line = $this->peekLineNumber($this);
 
-        $result = parent::compilePrintExpression($value, $attributes, $modifiers);
+        $result = $this->honourHtmlable(parent::compilePrintExpression($value, $attributes, $modifiers));
 
         if ($result === '' || $line === null) {
             return $result;
         }
 
         return '<?php /*__SLM:'.$line.'*/ ?>'.$result;
+    }
+
+    /**
+     * Smarty compiles escape_html into each print tag as an inline
+     * `htmlspecialchars((string) (…), ENT_QUOTES, '…')`. Swap that one call
+     * for PluginOutput::printed(), which takes the same arguments but prints
+     * an Htmlable as is (#68). Only the prefix Smarty itself generates is
+     * touched; nofilter and raw-output tags have no such call to swap.
+     */
+    private function honourHtmlable(string $compiled): string
+    {
+        return str_replace(
+            '<?php echo htmlspecialchars((string) (',
+            '<?php echo \\'.PluginOutput::class.'::printed((',
+            $compiled,
+        );
     }
 
     private static ?Closure $linePeeker = null;

@@ -30,6 +30,30 @@ Updated {$post->updated_at|since|escape}    {* Updated 2 minutes ago *}
 
 The same convention applies to `function.<name>.php`, `block.<name>.php`, etc. — see the [Smarty plugin docs](https://www.smarty.net/docs/en/plugins.tpl).
 
+## Returning HTML from a modifier
+
+With `escape_html` on, a modifier's string result is escaped like any other value. To return markup, return an `Illuminate\Contracts\Support\Htmlable`, such as an `HtmlString`. It's printed as is, the same way Blade treats one. The modifier then owns the escaping of anything it interpolates:
+
+```php
+use Illuminate\Support\HtmlString;
+
+function smarty_modifier_highlight(string $text, string $term): HtmlString
+{
+    $html = e($text);
+    if ($term !== '') {
+        $html = str_ireplace(e($term), '<mark>'.e($term).'</mark>', $html);
+    }
+
+    return new HtmlString($html);
+}
+```
+
+```smarty
+{$person->name|highlight:$q}
+```
+
+Chaining another modifier after it, such as `|upper`, turns the result back into a plain string, and that is escaped.
+
 ## Class-backed plugins
 
 Two **additional**, optional registration styles let you write plugins as classes instead of file-scoped functions. Both are wired up alongside `plugins_paths` — pick whichever ergonomics suit the team, or mix freely. Discovery is namespace-driven, so plugins from a third-party package and host-app plugins both land on the same Smarty instance without manual stitching.
