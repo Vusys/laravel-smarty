@@ -4,6 +4,10 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## \[Unreleased\]
 
+## \[0.23.0\] - 2026-11-17
+
+An `Htmlable` now prints as HTML, so `{$paginator->links()}` and custom modifiers that return HTML render correctly under the default auto-escaping. Clear compiled templates after upgrading.
+
 ### Fixed
 
 - **An `Htmlable` is printed as HTML, as in Blade's `{{ }}`** (#68). Under `escape_html`, every `{$…}` was escaped, including values that are already HTML. So `{$paginator->links()}` (the documented way to render pagination), an `HtmlString`, or a custom modifier's `Htmlable` return rendered as visible markup. Print expressions now call `PluginOutput::printed()` in place of Smarty's inline `htmlspecialchars()`, with the same arguments. An `Illuminate\Contracts\Support\Htmlable` is emitted with `toHtml()`, and everything else is escaped exactly as before. Run `php artisan smarty:clear-compiled` after upgrading, because existing compiled templates keep the old escaping until they recompile.
